@@ -1,0 +1,23 @@
+# Generated/updated by setup-ai-project
+# Evidence-based AI context exclusions — not a security boundary by itself
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+credentials.json
+service-account*.json
+secrets/
+credentials/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+graphify-out/graph.json
+graphify-out/graph.html
+graphify-out/cache/
+data/backups/

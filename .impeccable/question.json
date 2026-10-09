@@ -1,0 +1,75 @@
+{
+  "title": "A cara nova da Rotina Bonette",
+  "question": "A direção é o relógio de pauta. Fica com ela, pega uma alternativa, ou pede outra rodada. Três formas ficaram fora desta mão: partitura de dança, catálogo de mascotes e campo preto-e-branco estroboscópico.",
+  "reroll": true,
+  "canon": true,
+  "steer": true,
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Relógio de pauta",
+      "kicker": "Direção",
+      "lineage": "Relógio de estúdio e pauta de rádio, lidos de dia numa mesa.",
+      "thesis": "O dia é um relógio: a tarefa de agora ocupa o segmento ao vivo, e hoje só tem três vãos.",
+      "palette": ["#f4f5f7", "#1a1d21", "#a33b32", "#d9dde3"],
+      "materials": ["face de relógio", "arco do segmento", "ficha de cue", "número tabular"],
+      "viewport": "Relógio à esquerda com a tarefa dentro do arco; à direita, três vãos de hoje e Iniciar foco no segmento.",
+      "risk": "Se o arco virar enfeite e a tarefa encolher, a tela falha.",
+      "sketch": ".impeccable/sketches/relogio.png"
+    },
+    {
+      "id": "ticket",
+      "label": "Carteira de cupom",
+      "kicker": "Alternativa",
+      "lineage": "Carteira de passagem da era do jato: cupom, mapa e etiqueta.",
+      "thesis": "Cada tarefa é um cupom. O que resta na carteira é o que ainda cabe hoje.",
+      "palette": ["#ffffff", "#1b2a4a", "#b42318", "#6b4c9a"],
+      "materials": ["cupom", "numeral carbono", "carimbo", "aba"],
+      "viewport": "Um cupom grande no centro, campos de projeto e minutos, carimbo no que já foi feito.",
+      "case": "O limite fica óbvio, mas a viagem não é a cena dele. Não ganha a identificação.",
+      "risk": "O figurino de aviação pode cansar no uso de todo dia.",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-jet-age-ticket-wallet-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/vernacular-ephemera-jet-age-ticket-wallet.webp",
+      "sketch": ".impeccable/sketches/cupom.png"
+    },
+    {
+      "id": "plate",
+      "label": "Prancha de anuário",
+      "kicker": "Alternativa",
+      "lineage": "Página de anuário gráfico: cruz de registro, fio e um carimbo.",
+      "thesis": "Hoje é uma prancha só: a tarefa ativa no centro, o motivo na linha de créditos.",
+      "palette": ["#F5F4F6", "#16181A", "#DCDDF3", "#C9C7C4"],
+      "materials": ["papel quase branco", "cruz de registro", "carimbo", "fio de cabelo"],
+      "viewport": "Uma prancha com cruzes nos cantos, a tarefa no meio e o motivo numa faixa fina embaixo.",
+      "case": "A prancha deixa uma tarefa limpa, mas a mobília de anuário não é o dia dele.",
+      "risk": "Cruzes e carimbo podem virar ruído em cima da tarefa.",
+      "hero": "https://impeccable.style/worlds/cards/design-annual-s-plate-section-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/design-annual-s-plate-section.webp",
+      "sketch": ".impeccable/sketches/prancha.png"
+    },
+    {
+      "id": "rail",
+      "label": "Margem larga",
+      "kicker": "Alternativa",
+      "lineage": "Edição de referência: duas colunas e uma chave no centro.",
+      "thesis": "Duas colunas curtas e uma chave vermelha no meio carregam estado e motivo.",
+      "palette": ["#f3efe6", "#1a120e", "#c23b22"],
+      "materials": ["papel osso", "tinta", "vermelhão", "fio de régua"],
+      "viewport": "Miolo estreito no centro, chaves vermelhas entre as colunas, margem larga com o motivo.",
+      "case": "A chave explica o porquê, mas o miolo pequeno esconde a única tarefa que precisa dominar.",
+      "risk": "Parece livro de estudo, não o comando do dia.",
+      "hero": "https://impeccable.style/worlds/cards/rw-centre-rail-reference-setting-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/rw-centre-rail-reference-setting.webp",
+      "sketch": ".impeccable/sketches/margem.png"
+    }
+  ],
+  "canonCard": {
+    "label": "App de tarefas padrão",
+    "thesis": "Barra lateral, lista e um botão. O aplicativo de produtividade que todo mundo já viu.",
+    "palette": ["#ffffff", "#111827", "#2563eb", "#e5e7eb"],
+    "materials": ["barra lateral", "lista", "botão preenchido"],
+    "viewport": "Menu à esquerda, título e lista à direita, um botão azul no topo.",
+    "risk": "É o caminho familiar. Some no meio dos outros apps do mesmo tipo.",
+    "sketch": ".impeccable/sketches/canon.png"
+  }
+}

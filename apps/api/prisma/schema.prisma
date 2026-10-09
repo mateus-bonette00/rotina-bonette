@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  MAINTENANCE
+  PARKED
+  ARCHIVED
+}
+
+enum Priority {
+  P1
+  P2
+  P3
+  P4
+}
+
+enum ProjectCategory {
+  CLIENT
+  WORK
+  PERSONAL
+  PORTFOLIO
+  MAINTENANCE
+  LEARNING
+}
+
+enum TaskStatus {
+  INBOX
+  BACKLOG
+  THIS_WEEK
+  TODAY
+  DOING
+  WAITING
+  DONE
+}
+
+enum EnergyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum IdeaStatus {
+  INBOX
+  REVIEWED
+  CONVERTED
+  DISCARDED
+}
+
+enum CalendarType {
+  DEEP_FOCUS
+  TASK
+  ROUTINE
+  MEETING
+  PERSONAL
+}
+
+enum FocusStatus {
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+enum ThemeSetting {
+  dark
+  light
+  system
+}
+
+model User {
+  id          String    @id @default(cuid())
+  name        String
+  pinHash     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  description String          @default("")
+  color       String
+  icon        String          @default("folder")
+  status      ProjectStatus   @default(PARKED)
+  priority    Priority        @default(P3)
+  category    ProjectCategory @default(PERSONAL)
+  deadline    DateTime?
+  progress    Int             @default(0)
+  notes       String?
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  archivedAt  DateTime?
+  tasks       Task[]
+  blocks      CalendarBlock[]
+  routines    Routine[]
+  ideas       Idea[]
+
+  @@index([status])
+}
+
+model Task {
+  id                 String      @id @default(cuid())
+  projectId          String?
+  project            Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title              String
+  description        String?
+  status             TaskStatus  @default(INBOX)
+  priority           Priority    @default(P3)
+  dailyRank          Int?
+  estimatedMinutes   Int?
+  energy             EnergyLevel @default(MEDIUM)
+  aversion           EnergyLevel @default(LOW)
+  dueDate            DateTime?
+  scheduledDate      DateTime?
+  externalCommitment Boolean     @default(false)
+  blocked            Boolean     @default(false)
+  blockReason        String?
+  nextAction         String?
+  sortOrder          Int         @default(0)
+  completedAt        DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  focusSessions      FocusSession[]
+  blocks             CalendarBlock[]
+  ideas              Idea[]
+
+  @@index([status])
+  @@index([projectId])
+  @@index([dueDate])
+}
+
+model Idea {
+  id                 String     @id @default(cuid())
+  title              String
+  description        String?
+  category           String?
+  status             IdeaStatus @default(INBOX)
+  convertedTaskId    String?
+  convertedTask      Task?      @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  convertedProjectId String?
+  convertedProject   Project?   @relation(fields: [convertedProjectId], references: [id], onDelete: SetNull)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model CalendarBlock {
+  id        String       @id @default(cuid())
+  title     String
+  projectId String?
+  project   Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId    String?
+  task      Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  type      CalendarType
+  startAt   DateTime
+  endAt     DateTime
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([startAt, endAt])
+}
+
+model Routine {
+  id              String   @id @default(cuid())
+  name            String
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  enabled         Boolean  @default(true)
+  daysOfWeek      Int[]
+  startTime       String?
+  durationMinutes Int
+  type            String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model FocusSession {
+  id             String      @id @default(cuid())
+  taskId         String
+  task           Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startedAt      DateTime    @default(now())
+  endedAt        DateTime?
+  plannedMinutes Int?
+  actualMinutes  Int?
+  status         FocusStatus @default(RUNNING)
+  notes          String?
+  createdAt      DateTime    @default(now())
+}
+
+model AppSettings {
+  id                  String       @id @default("app")
+  theme               ThemeSetting @default(system)
+  weekStartsOn        Int          @default(1)
+  defaultFocusMinutes Int          @default(25)
+  sessionIdleHours    Int          @default(12)
+  showCompletedDays   Int          @default(7)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+}

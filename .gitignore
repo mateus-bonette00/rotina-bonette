@@ -1,0 +1,186 @@
+# =============================================================================
+# Rotina Bonette — .gitignore
+# Monorepo: apps/web (Vite/React) + apps/api (Express/Prisma) + packages/shared
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.npm/
+.pnpm-store/
+
+# -----------------------------------------------------------------------------
+# Environment & secrets
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+secrets/
+credentials/
+*.secret
+*.secrets
+
+# -----------------------------------------------------------------------------
+# Build outputs
+# -----------------------------------------------------------------------------
+dist/
+build/
+out/
+.tmp/
+*.tsbuildinfo
+apps/*/dist/
+packages/*/dist/
+
+# -----------------------------------------------------------------------------
+# Vite / Vitest / TypeScript tooling caches
+# -----------------------------------------------------------------------------
+.vite/
+.vitest/
+*.local
+.eslintcache
+.stylelintcache
+.turbo/
+.cache/
+.parcel-cache/
+.fusebox/
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# -----------------------------------------------------------------------------
+# Test & coverage
+# -----------------------------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+lib-cov/
+
+# -----------------------------------------------------------------------------
+# Playwright
+# -----------------------------------------------------------------------------
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# -----------------------------------------------------------------------------
+# Prisma / local databases
+# -----------------------------------------------------------------------------
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+apps/api/prisma/*.db-shm
+apps/api/prisma/*.db-wal
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+prisma/*.db
+
+# -----------------------------------------------------------------------------
+# Backups (keep folder via .gitkeep)
+# -----------------------------------------------------------------------------
+data/backups/*
+!data/backups/.gitkeep
+*.sql.gz
+*.dump
+*.backup
+
+# -----------------------------------------------------------------------------
+# Logs & debug
+# -----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# -----------------------------------------------------------------------------
+# OS junk
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# -----------------------------------------------------------------------------
+# Editors & IDEs (keep shared project settings if you add them later)
+# -----------------------------------------------------------------------------
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# -----------------------------------------------------------------------------
+# AI / agent local noise (project policy files stay tracked)
+# -----------------------------------------------------------------------------
+.impeccable/**/*.log
+apps/web/.impeccable/**/*.log
+.cursor/plans/
+.cursor/tmp/
+.claude/settings.local.json
+.codex/
+.agent-scratch/
+
+# -----------------------------------------------------------------------------
+# Graphify (generated graph artifacts; regenerate with `graphify update .`)
+# -----------------------------------------------------------------------------
+graphify-out/
+
+# -----------------------------------------------------------------------------
+# Temporary / misc
+# -----------------------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+.history/
+.serverless/
+.tern-port
+.pid
+*.pid
+*.seed
+*.pid.lock
+.clinic/
+flamegraph.html
+profile.json
+heapdump-*.heapsnapshot

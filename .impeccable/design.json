@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T21:00:00-03:00",
+  "title": "Design System: Rotina Bonette",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Mesa",
+        "canonical": "oklch(97.1% 0.003 286.4)",
+        "tonalRamp": ["oklch(15.0% 0.002 286.4)", "oklch(26.0% 0.003 286.4)", "oklch(38.0% 0.003 286.4)", "oklch(50.0% 0.003 286.4)", "oklch(62.0% 0.003 286.4)", "oklch(74.0% 0.003 286.4)", "oklch(86.0% 0.003 286.4)", "oklch(95.0% 0.002 286.4)"]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": ["oklch(15.0% 0 0)", "oklch(26.0% 0 0)", "oklch(38.0% 0 0)", "oklch(50.0% 0 0)", "oklch(62.0% 0 0)", "oklch(74.0% 0 0)", "oklch(86.0% 0 0)", "oklch(95.0% 0 0)"]
+      },
+      "panel-2": {
+        "role": "neutral",
+        "displayName": "Recolhido",
+        "canonical": "oklch(95.6% 0.004 286.3)",
+        "tonalRamp": ["oklch(15.0% 0.003 286.3)", "oklch(26.0% 0.004 286.3)", "oklch(38.0% 0.004 286.3)", "oklch(50.0% 0.004 286.3)", "oklch(62.0% 0.004 286.3)", "oklch(74.0% 0.004 286.3)", "oklch(86.0% 0.004 286.3)", "oklch(95.0% 0.003 286.3)"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Fio",
+        "canonical": "oklch(92.3% 0.007 286.3)",
+        "tonalRamp": ["oklch(15.0% 0.006 286.3)", "oklch(26.0% 0.007 286.3)", "oklch(38.0% 0.007 286.3)", "oklch(50.0% 0.007 286.3)", "oklch(62.0% 0.007 286.3)", "oklch(74.0% 0.007 286.3)", "oklch(86.0% 0.007 286.3)", "oklch(95.0% 0.006 286.3)"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "oklch(23.2% 0.004 286.1)",
+        "tonalRamp": ["oklch(15.0% 0.003 286.1)", "oklch(26.0% 0.004 286.1)", "oklch(38.0% 0.004 286.1)", "oklch(50.0% 0.004 286.1)", "oklch(62.0% 0.004 286.1)", "oklch(74.0% 0.004 286.1)", "oklch(86.0% 0.004 286.1)", "oklch(95.0% 0.003 286.1)"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Tinta baixa",
+        "canonical": "oklch(45.2% 0.010 286.0)",
+        "tonalRamp": ["oklch(15.0% 0.008 286.0)", "oklch(26.0% 0.010 286.0)", "oklch(38.0% 0.010 286.0)", "oklch(50.0% 0.010 286.0)", "oklch(62.0% 0.010 286.0)", "oklch(74.0% 0.010 286.0)", "oklch(86.0% 0.010 286.0)", "oklch(95.0% 0.008 286.0)"]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Azul de ação",
+        "canonical": "oklch(56.3% 0.193 256.2)",
+        "tonalRamp": ["oklch(15.0% 0.164 256.2)", "oklch(26.0% 0.193 256.2)", "oklch(38.0% 0.193 256.2)", "oklch(50.0% 0.193 256.2)", "oklch(62.0% 0.193 256.2)", "oklch(74.0% 0.193 256.2)", "oklch(86.0% 0.193 256.2)", "oklch(95.0% 0.164 256.2)"]
+      },
+      "hot": {
+        "role": "status",
+        "displayName": "Urgente",
+        "canonical": "oklch(50.0% 0.182 29.5)",
+        "tonalRamp": ["oklch(15.0% 0.155 29.5)", "oklch(26.0% 0.182 29.5)", "oklch(38.0% 0.182 29.5)", "oklch(50.0% 0.182 29.5)", "oklch(62.0% 0.182 29.5)", "oklch(74.0% 0.182 29.5)", "oklch(86.0% 0.182 29.5)", "oklch(95.0% 0.155 29.5)"]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Atenção",
+        "canonical": "oklch(50.8% 0.108 73.3)",
+        "tonalRamp": ["oklch(15.0% 0.092 73.3)", "oklch(26.0% 0.108 73.3)", "oklch(38.0% 0.108 73.3)", "oklch(50.0% 0.108 73.3)", "oklch(62.0% 0.108 73.3)", "oklch(74.0% 0.108 73.3)", "oklch(86.0% 0.108 73.3)", "oklch(95.0% 0.092 73.3)"]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Feito",
+        "canonical": "oklch(45.3% 0.098 156.6)",
+        "tonalRamp": ["oklch(15.0% 0.083 156.6)", "oklch(26.0% 0.098 156.6)", "oklch(38.0% 0.098 156.6)", "oklch(50.0% 0.098 156.6)", "oklch(62.0% 0.098 156.6)", "oklch(74.0% 0.098 156.6)", "oklch(86.0% 0.098 156.6)", "oklch(95.0% 0.083 156.6)"]
+      },
+      "strategy": {
+        "role": "status",
+        "displayName": "Estratégia",
+        "canonical": "oklch(43.1% 0.121 256.8)",
+        "tonalRamp": ["oklch(15.0% 0.103 256.8)", "oklch(26.0% 0.121 256.8)", "oklch(38.0% 0.121 256.8)", "oklch(50.0% 0.121 256.8)", "oklch(62.0% 0.121 256.8)", "oklch(74.0% 0.121 256.8)", "oklch(86.0% 0.121 256.8)", "oklch(95.0% 0.103 256.8)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Só a palavra Hoje." },
+      "headline": { "displayName": "Headline", "purpose": "Título das outras páginas." },
+      "title": { "displayName": "Title", "purpose": "Diálogo, tarefa em Agora e rótulo Agenda." },
+      "body": { "displayName": "Body", "purpose": "Texto de linha e cópia, em tinta." },
+      "label": { "displayName": "Label", "purpose": "Data, meta, rótulo de campo e item de navegação." },
+      "button": { "displayName": "Button", "purpose": "Rótulo semibold dos botões, no tamanho do label." }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 16px 40px rgb(29 29 31 / 0.16)",
+        "purpose": "Única elevação do sistema. Só o diálogo, sem borda."
+      }
+    ],
+    "motion": [
+      {
+        "name": "dialog-rise",
+        "value": "180ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "O diálogo aparece subindo 8px. Desliga com prefers-reduced-motion."
+      },
+      {
+        "name": "press",
+        "value": "translateY(1px)",
+        "purpose": "Botão ativo desce 1px. Desliga com prefers-reduced-motion."
+      },
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Hover de brilho, fundo e cor nos controles."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A única ação cheia. A cápsula é o mesmo primário na linha Agora.",
+      "html": "<button class=\"ds-btn-primary\">Salvar</button> <button class=\"ds-btn-primary ds-btn-capsule\">Iniciar foco</button>",
+      "css": ".ds-btn-primary { background: var(--focus); color: #fff; border: 0; border-radius: 10px; padding: 8px 12px; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; line-height: 1.25rem; transition: filter 150ms ease, transform 150ms ease; } .ds-btn-primary:hover { filter: brightness(1.1); } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-btn-primary:active:not(:disabled) { transform: translateY(1px); } .ds-btn-primary:disabled { opacity: 0.5; } .ds-btn-capsule { border-radius: 9999px; padding: 8px 16px; } @media (prefers-reduced-motion: reduce) { .ds-btn-primary:active:not(:disabled) { transform: none; } }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação secundária sobre papel, com fio e hover recolhido.",
+      "html": "<button class=\"ds-btn-ghost\">Cancelar</button>",
+      "css": ".ds-btn-ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; line-height: 1.25rem; transition: background 150ms ease, transform 150ms ease; } .ds-btn-ghost:hover { background: var(--panel-2); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-btn-ghost:active:not(:disabled) { transform: translateY(1px); } .ds-btn-ghost:disabled { opacity: 0.5; } @media (prefers-reduced-motion: reduce) { .ds-btn-ghost:active:not(:disabled) { transform: none; } }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Ação destrutiva. Fundo urgente, texto branco, sem hover próprio.",
+      "html": "<button class=\"ds-btn-danger\">Excluir</button>",
+      "css": ".ds-btn-danger { background: var(--hot); color: #fff; border: 0; border-radius: 10px; padding: 8px 12px; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; line-height: 1.25rem; transition: transform 150ms ease; } .ds-btn-danger:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-btn-danger:active:not(:disabled) { transform: translateY(1px); } .ds-btn-danger:disabled { opacity: 0.5; } @media (prefers-reduced-motion: reduce) { .ds-btn-danger:active:not(:disabled) { transform: none; } }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Ação terciária e saída. Sem fundo; o hover só troca a tinta.",
+      "html": "<button class=\"ds-btn-quiet\">Sair</button>",
+      "css": ".ds-btn-quiet { background: transparent; color: var(--muted); border: 0; border-radius: 10px; padding: 8px 12px; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600; line-height: 1.25rem; transition: color 150ms ease, transform 150ms ease; } .ds-btn-quiet:hover { color: var(--ink); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; } .ds-btn-quiet:active:not(:disabled) { transform: translateY(1px); } .ds-btn-quiet:disabled { opacity: 0.5; } @media (prefers-reduced-motion: reduce) { .ds-btn-quiet:active:not(:disabled) { transform: none; } }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Rótulo muted e controle com fio. O foco troca a borda, não adiciona brilho.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Nome</span><input class=\"ds-input\" placeholder=\"Nova tarefa na inbox…\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem; color: var(--ink); } .ds-field-label { color: var(--muted); } .ds-input { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); padding: 8px 12px; font: inherit; } .ds-input::placeholder { color: var(--muted); } .ds-input:focus { outline: none; border-color: var(--focus); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Agrupamento em papel, fio de 1px, sem sombra.",
+      "html": "<section class=\"ds-card\"><h3 class=\"ds-card-title\">Grupo</h3><p class=\"ds-card-copy\">Lista quieta, separada por fio.</p></section>",
+      "css": ".ds-card { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: none; font-family: var(--font-sans); } .ds-card-title { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.75rem; letter-spacing: -0.025em; } .ds-card-copy { margin: 8px 0 0; font-size: 0.875rem; line-height: 1.25rem; color: var(--muted); }"
+    },
+    {
+      "name": "Dialog",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "Papel opaco, raio de painel, sombra sem fio.",
+      "html": "<dialog class=\"ds-dialog\" open><h2 class=\"ds-dialog-title\">Nova tarefa</h2><div class=\"ds-dialog-body\"><label class=\"ds-field\"><span class=\"ds-field-label\">Título</span><input class=\"ds-input\" placeholder=\"O que entra na inbox…\" /></label></div></dialog>",
+      "css": ".ds-dialog { width: min(32rem, calc(100% - 2rem)); max-height: min(85dvh, 40rem); overflow: auto; margin: auto; border: 0; border-radius: 16px; padding: 20px 20px 24px; color: var(--ink); background: var(--panel); box-shadow: 0 16px 40px rgb(29 29 31 / 0.16); font-family: var(--font-sans); } .ds-dialog::backdrop { background: rgb(29 29 31 / 0.42); } .ds-dialog-title { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.75rem; letter-spacing: -0.025em; } .ds-dialog-body { margin-top: 16px; } .ds-field { display: grid; gap: 8px; font-size: 0.875rem; line-height: 1.25rem; } .ds-field-label { color: var(--muted); } .ds-input { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); padding: 8px 12px; font: inherit; } .ds-input:focus { outline: none; border-color: var(--focus); } .ds-dialog[open] { animation: ds-dialog-rise 180ms cubic-bezier(0.16, 1, 0.3, 1); } @keyframes ds-dialog-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } } @media (prefers-reduced-motion: reduce) { .ds-dialog[open] { animation: none; } }"
+    },
+    {
+      "name": "Sidebar nav",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Coluna de 240px. Ativo é texto azul sobre wash de 10%, não pílula preenchida.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item-active\" href=\"#hoje\">Hoje</a><a class=\"ds-nav-item\" href=\"#calendario\">Calendário</a></nav>",
+      "css": ".ds-nav { display: grid; gap: 2px; width: 240px; background: var(--panel); border-right: 1px solid var(--line); padding: 12px; font-family: var(--font-sans); } .ds-nav-item { display: block; border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: 0.875rem; font-weight: 400; line-height: 1.25rem; text-decoration: none; } .ds-nav-item:hover { background: var(--panel-2); color: var(--ink); } .ds-nav-item-active, .ds-nav-item-active:hover { background: color-mix(in srgb, var(--focus) 10%, transparent); color: var(--focus); font-weight: 500; } .ds-nav-item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Priority",
+      "kind": "chip",
+      "refersTo": "priority-p1",
+      "description": "P1 a P4 em texto semibold, sem caixa.",
+      "html": "<p class=\"ds-priorities\"><span class=\"ds-p1\">P1</span><span class=\"ds-p2\">P2</span><span class=\"ds-p3\">P3</span><span class=\"ds-p4\">P4</span></p>",
+      "css": ".ds-priorities { display: flex; gap: 12px; margin: 0; font-family: var(--font-sans); font-size: 0.75rem; font-weight: 600; line-height: 1rem; } .ds-p1 { color: var(--hot); } .ds-p2 { color: var(--strategy); } .ds-p3 { color: var(--warn); } .ds-p4 { color: var(--muted); }"
+    },
+    {
+      "name": "Agenda block",
+      "kind": "custom",
+      "description": "Bloco do trilho 09–18: 22% da cor do projeto sobre o papel, raio de controle.",
+      "html": "<div class=\"ds-agenda\"><span class=\"ds-agenda-hour\">09</span><div class=\"ds-agenda-block\"><p class=\"ds-agenda-title\">Revisão</p><p class=\"ds-agenda-meta\">OdontoClin</p></div></div>",
+      "css": ".ds-agenda { position: relative; height: 56px; font-family: var(--font-sans); } .ds-agenda-hour { position: absolute; left: 0; top: 0; color: var(--muted); font-size: 0.75rem; font-weight: 400; line-height: 1rem; font-variant-numeric: tabular-nums; } .ds-agenda-block { position: absolute; left: 48px; right: 0; top: 0; min-height: 28px; overflow: hidden; border-radius: 10px; padding: 4px 8px; background: color-mix(in srgb, var(--focus) 22%, var(--panel)); } .ds-agenda-title { margin: 0; color: var(--ink); font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; } .ds-agenda-meta { margin: 0; color: var(--muted); font-size: 0.75rem; line-height: 1rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Luz de mesa",
+    "overview": "Rotina Bonette é a mesa clara da categoria, no nível de Things 3, Fantastical e Sunsama. Fundo de mesa, painéis brancos, tinta quase preta, uma ação azul. O resto é lista, fio e horário. A densidade é de app pessoal.\n\nA luz é o padrão. O escuro só inverte os mesmos tokens para um cinza frio. A sans do sistema cobre display, título e corpo. A palavra Hoje é o único display: 3rem, peso 700, tracking -0.03em, com a data do dia em texto muted imediatamente acima.\n\nA navegação é uma coluna branca de 240px. O item ativo é texto azul sobre um wash de 10% do azul, nunca uma pílula preenchida. A captura fica no pé dessa coluna e, abaixo de 768px, acima da barra inferior. A home, a partir de 1024px, abre em duas colunas: Hoje e a linha Agora à esquerda, trilho de horas de 09 a 18 à direita.",
+    "keyCharacteristics": [
+      "Mesa clara, um azul de ação",
+      "Sans do sistema em tudo; display só em Hoje",
+      "10px nos controles, 16px nos painéis e no diálogo",
+      "Agrupamento em fio de 1px; sombra só no diálogo",
+      "Ativo em wash, não em pílula",
+      "Home em split, com trilho de horas"
+    ],
+    "rules": [
+      {
+        "name": "The One Action Rule",
+        "body": "O azul `focus` é a única cor de ação. Hot, warn, ok e strategy marcam prioridade ou retorno e não viram um segundo primário.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cool Inversion Rule",
+        "body": "O tema escuro reatribui os mesmos nomes para um cinza frio. Não cria acento novo nem muda o raio, o tipo ou a sombra.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Face Rule",
+        "body": "Uma família, a sans do sistema, do display ao rótulo. Sem Fraunces e sem segunda fonte.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hoje Display Rule",
+        "body": "3rem, peso 700 e tracking -0.03em pertencem só à palavra Hoje. A data do dia, em 0.875rem e cor muted, senta imediatamente acima e não se repete como sobretítulo nas outras páginas. Título de página é 1.75rem / 650.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sidebar Rule",
+        "body": "240px, papel branco, fio à direita, invisível abaixo de 768px. A barra inferior só existe nessa quebra.",
+        "section": "layout"
+      },
+      {
+        "name": "The Capture Anchor Rule",
+        "body": "A captura fica no fim da sidebar no desktop e, em tela pequena, acima da navegação inferior.",
+        "section": "layout"
+      },
+      {
+        "name": "The Home Split Rule",
+        "body": "Só a home abre em duas colunas a partir de 1024px: o dia à esquerda, o trilho de horas à direita. As outras páginas permanecem numa coluna.",
+        "section": "layout"
+      },
+      {
+        "name": "The Line Or Shadow Rule",
+        "body": "Superfície que só agrupa leva fio de 1px e nenhuma sombra. O diálogo leva sombra e nenhum fio. Os dois tratamentos não se misturam.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Two Corners Rule",
+        "body": "10px é controle, item de navegação, cartão aninhado e bloco de agenda. 16px é painel grande e diálogo. Cápsula e círculo ficam no primário da linha Agora e no check da lista.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Wash Rule",
+        "body": "Item ativo da navegação é texto `focus` sobre wash de 10% do mesmo azul, no raio de controle. Não é fundo azul sólido.",
+        "section": "components"
+      },
+      {
+        "name": "The Bare Priority Rule",
+        "body": "P1–P4 são texto semibold de 0.75rem na cor do estado. Sem fundo, sem borda, sem cápsula.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do usar o tema claro como padrão: fundo `bg`, painel `panel`, tinta `ink`, secundário `muted`, ação `focus`.",
+      "Do reservar 3rem / 700 / -0.03em para Hoje e 1.75rem / 650 para os outros títulos de página.",
+      "Do desenhar o diálogo em papel opaco, raio 16px, largura min(32rem, calc(100% - 2rem)), sem borda, com sombra 0 16px 40px rgb(29 29 31 / 0.16).",
+      "Do manter a home em split: data acima de Hoje, linha Agora com primário em cápsula, linhas com círculo de 20px, trilho 09–18 com blocos a 22% da cor do projeto sobre o painel."
+    ],
+    "donts": [
+      "Don't usar Fraunces ou qualquer serifada de display.",
+      "Don't pintar o item ativo da sidebar como pílula preenchida.",
+      "Don't colocar sombra em card que só agrupa, nem borda no diálogo.",
+      "Don't criar um segundo azul de ação. Cores de prioridade não substituem `focus`.",
+      "Don't repetir o display de Hoje, nem a linha de data acima dele, nas outras páginas."
+    ]
+  }
+}

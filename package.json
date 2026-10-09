@@ -1,0 +1,37 @@
+{
+  "name": "rotina-bonette",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:all": "npm run db:up && npm run dev",
+    "dev:web": "npm run dev -w rotina-bonette-web",
+    "dev:api": "npm run dev -w rotina-bonette-api",
+    "build": "npm run build -w rotina-bonette-shared && npm run build -w rotina-bonette-api && npm run build -w rotina-bonette-web",
+    "test": "npm run build -w rotina-bonette-shared && npm run test -w rotina-bonette-shared && npm run test -w rotina-bonette-api && npm run test -w rotina-bonette-web",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck -w rotina-bonette-shared && npm run typecheck -w rotina-bonette-api && npm run typecheck -w rotina-bonette-web",
+    "db:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
+    "db:migrate": "npm run db:migrate -w rotina-bonette-api",
+    "db:seed": "npm run db:seed -w rotina-bonette-api",
+    "setup": "npm run setup -w rotina-bonette-api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@playwright/test": "^1.52.0",
+    "eslint": "^9.28.0",
+    "globals": "^16.2.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

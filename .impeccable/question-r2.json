@@ -1,0 +1,75 @@
+{
+  "title": "Outra rodada",
+  "question": "A direção agora é a bandeja de propagação. Fica com ela, pega uma alternativa, ou pede outra rodada. Fora desta mão: mapa de orientação, mapa de jardim zoológico e feed de vídeo vertical.",
+  "reroll": true,
+  "canon": true,
+  "steer": true,
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Bandeja de propagação",
+      "kicker": "Direção",
+      "lineage": "Bandeja de estufa: células, uma redoma, etiquetas.",
+      "thesis": "Uma célula está viva. Hoje rega só três. O resto da bandeja fica seco de propósito.",
+      "palette": ["#e4e7e2", "#2a2824", "#3d6b45", "#f7f4ee"],
+      "materials": ["célula plástica", "redoma", "etiqueta", "terra"],
+      "viewport": "Bandeja ocupando a tela; a célula com redoma leva a tarefa de agora; três células do dia ao lado, vazias quando faltam.",
+      "risk": "Se virar ilustração de planta e a etiqueta encolher, a tarefa some.",
+      "sketch": ".impeccable/sketches/bandeja.png"
+    },
+    {
+      "id": "splitflap",
+      "label": "Quadro de partidas",
+      "kicker": "Alternativa",
+      "lineage": "Painel split-flap de estação, na hora do rush.",
+      "thesis": "Cada tarefa é uma linha que vira letra por letra. A de agora está acesa. Atrasada fica âmbar. Estacionada apaga em vermelho.",
+      "palette": ["#c5c8cc", "#141414", "#f4f1ea", "#d0892b"],
+      "materials": ["aleta", "quadro de aço", "lâmpada âmbar", "tipo condensado"],
+      "viewport": "Quadro em linhas fixas: agora na primeira fileira acesa, hoje nas três seguintes, o motivo numa coluna que não se move.",
+      "case": "Ganha nos dois eixos: o quadro de estação é mais reconhecível que a bandeja, e a linha mantém a tarefa legível.",
+      "risk": "A aleta corta título longo se a coluna for estreita demais.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse.webp",
+      "sketch": ".impeccable/sketches/splitflap.png"
+    },
+    {
+      "id": "metro",
+      "label": "Azulejo tipográfico",
+      "kicker": "Alternativa",
+      "lineage": "Tela de metrô: ladrilhos chapados e letra minúscula gigante.",
+      "thesis": "A tarefa de agora é uma palavra enorme. O resto são ladrilhos que viram ao toque.",
+      "palette": ["#0e0e0e", "#f4f7f8", "#2aa7b8"],
+      "materials": ["ladrilho chapado", "tipo gigante", "panorama"],
+      "viewport": "Um ladrilho ocupa a esquerda com a tarefa em tipo enorme; os outros três de hoje entram pela borda.",
+      "case": "O tipo enorme faz o agora dominar, mas cortar o título quebra a leitura. Não ganha a clareza.",
+      "risk": "Fundo preto o dia inteiro, e o título cortado na borda.",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-metro-typographic-tiles-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/digital-design-canon-metro-typographic-tiles.webp",
+      "sketch": ".impeccable/sketches/metro.png"
+    },
+    {
+      "id": "acetate",
+      "label": "Manual com acetato",
+      "kicker": "Alternativa",
+      "lineage": "Manual de software em caixa: divisória colorida e folha de acetato.",
+      "thesis": "A tela de hoje é uma divisória de cor sólida. A tarefa fica numa folha clara, furada, por cima.",
+      "palette": ["#f2c200", "#f7f4ee", "#1c1a17", "#d23b2a"],
+      "materials": ["acetato", "divisória", "furo", "aba"],
+      "viewport": "Aba colorida na borda direita marca a seção; a folha clara no centro carrega a tarefa de agora.",
+      "case": "As abas organizam as telas, mas o miolo de manual puxa para leitura e não para a tarefa única.",
+      "risk": "Vira livro de consulta e a ação fica miúda.",
+      "hero": "https://impeccable.style/worlds/cards/rw-manual-acetate-tab-board-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/rw-manual-acetate-tab-board.webp",
+      "sketch": ".impeccable/sketches/acetato.png"
+    }
+  ],
+  "canonCard": {
+    "label": "App de tarefas padrão",
+    "thesis": "Barra lateral, lista e um botão. O aplicativo de produtividade que todo mundo já viu.",
+    "palette": ["#ffffff", "#111827", "#2563eb", "#e5e7eb"],
+    "materials": ["barra lateral", "lista", "botão preenchido"],
+    "viewport": "Menu à esquerda, título e lista à direita, um botão azul no topo.",
+    "risk": "É o caminho familiar. Some no meio dos outros apps do mesmo tipo.",
+    "sketch": ".impeccable/sketches/canon.png"
+  }
+}
