@@ -18,10 +18,14 @@ const schema = z.object({
     .transform((value) => value.replace(/\/$/, "")),
   SESSION_SECRET: z.string().min(16),
   SESSION_IDLE_HOURS: z.coerce.number().int().positive().default(12),
+  // Deploy em PaaS: opt-in explícito para escutar fora de localhost e confiar no proxy reverso.
+  ALLOW_PUBLIC_BIND: z.enum(["true", "false"]).default("false"),
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  WEB_DIST: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);
 
-if (env.API_HOST === "0.0.0.0" || env.API_HOST === "::") {
+if ((env.API_HOST === "0.0.0.0" || env.API_HOST === "::") && env.ALLOW_PUBLIC_BIND !== "true") {
   throw new Error("A API só pode escutar em localhost. Não use 0.0.0.0.");
 }

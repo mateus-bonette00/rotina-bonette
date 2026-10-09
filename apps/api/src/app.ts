@@ -1,3 +1,4 @@
+import path from "node:path";
 import cors from "cors";
 import { Prisma } from "@prisma/client";
 import express, { type NextFunction, type Request, type Response } from "express";
@@ -43,7 +44,7 @@ export async function createApp() {
   await ensureConstraints();
   const app = express();
   app.disable("x-powered-by");
-  app.set("trust proxy", false);
+  app.set("trust proxy", env.TRUST_PROXY || false);
 
   app.use(
     helmet({
@@ -52,6 +53,7 @@ export async function createApp() {
         useDefaults: true,
         directives: {
           defaultSrc: ["'none'"],
+          connectSrc: ["'self'"],
           frameAncestors: ["'none'"],
         },
       },
@@ -138,6 +140,11 @@ export async function createApp() {
   app.use("/api", (_req, _res, next) => {
     next(new AppError(404, "NOT_FOUND", "Rota não encontrada."));
   });
+
+  if (env.WEB_DIST) {
+    app.use(express.static(env.WEB_DIST));
+    app.get("*", (_req, res) => res.sendFile(path.join(env.WEB_DIST!, "index.html")));
+  }
 
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof AppError) {
