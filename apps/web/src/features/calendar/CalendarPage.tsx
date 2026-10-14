@@ -34,6 +34,9 @@ import { cx } from "../../lib/format";
 import { days } from "../routines/RoutinesPage";
 import type { CalendarBlock, Project, Routine, Settings, Task } from "../../types";
 
+// Abaixo de 768px (breakpoint md) a semana não cabe: usa a visão de dia.
+const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
+
 type FormValues = z.infer<typeof calendarWriteSchema>;
 type RoutineValues = z.infer<typeof routineWriteSchema>;
 // Um editor serve para bloco avulso (uma data) e rotina fixa (toda semana).
@@ -359,11 +362,11 @@ export function CalendarPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
           {/* Project filter */}
           <select
             aria-label="Filtrar blocos por projeto"
-            className="h-9.5 rounded-xl border border-line bg-panel px-3 text-xs text-ink outline-none transition focus:border-focus cursor-pointer"
+            className="h-9.5 min-w-0 flex-1 rounded-xl border border-line bg-panel px-3 text-xs sm:flex-none text-ink outline-none transition focus:border-focus cursor-pointer"
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
           >
@@ -421,7 +424,17 @@ export function CalendarPage() {
       >
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          initialView={isMobile() ? "timeGridDay" : "timeGridWeek"}
+          windowResize={(arg) => {
+            if (isMobile() && arg.view.type === "timeGridWeek") arg.view.calendar.changeView("timeGridDay");
+          }}
+          views={{ timeGridWeek: { dayHeaderFormat: { weekday: "short", day: "numeric" } } }}
+          eventMinHeight={22}
+          eventClassNames={(arg) => {
+            const { start, end } = arg.event;
+            const mins = start && end ? (end.getTime() - start.getTime()) / 60_000 : 60;
+            return mins < 30 ? ["is-compact"] : mins < 60 ? ["is-short"] : [];
+          }}
           locale={ptBr}
           firstDay={settings.data?.settings.weekStartsOn ?? 1}
           headerToolbar={{
@@ -444,21 +457,26 @@ export function CalendarPage() {
           events={events}
           eventDisplay="block"
           eventContent={(arg) => {
-            const { kind, priority: prio, color } = arg.event.extendedProps as {
+            const { kind, priority: prio, color, paused } = arg.event.extendedProps as {
               kind: string;
               priority: Priority;
               color?: string;
+              paused?: boolean;
             };
+            const [from, ...to] = arg.timeText.split(" - ");
             return (
-              <div className="fc-ev">
-                <div className="fc-ev-meta">
+              <div className="fc-ev" title={arg.timeText ? `${arg.event.title} · ${arg.timeText}` : arg.event.title}>
+                <span className="fc-ev-lead">
                   {color ? <span className="fc-ev-project" style={{ background: color }} /> : null}
                   {kind === "routine" ? <Repeat className="h-3 w-3 shrink-0" aria-label="Rotina fixa" /> : null}
-                  {(arg.event.extendedProps as { paused?: boolean }).paused ? <Pause className="h-3 w-3 shrink-0" aria-label="Pausada" /> : null}
-                  <span className="fc-ev-time">{arg.timeText}</span>
-                  <span className="fc-ev-prio">{prio}</span>
-                </div>
-                <div className="fc-ev-title">{arg.event.title}</div>
+                  {paused ? <Pause className="h-3 w-3 shrink-0" aria-label="Pausada" /> : null}
+                </span>
+                <span className="fc-ev-title">{arg.event.title}</span>
+                <span className="fc-ev-time">
+                  {from}
+                  {to.length ? <span className="fc-ev-end"> – {to.join(" - ")}</span> : null}
+                </span>
+                <span className="fc-ev-prio">{prio}</span>
               </div>
             );
           }}

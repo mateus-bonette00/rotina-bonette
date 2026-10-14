@@ -317,11 +317,49 @@ input[type="color"] {
 /* Ocorrência pausada: fantasma tracejado, clicável para retomar. */
 .fc .fc-event.is-paused { background: transparent !important; background-image: none !important; border-style: dashed !important; border-left-width: 2px !important; box-shadow: none !important; opacity: 0.55; }
 .fc .fc-event.is-paused .fc-ev-title { text-decoration: line-through; color: var(--muted); }
-.fc-ev { display: grid; gap: 1px; overflow: hidden; line-height: 1.25; }
-.fc-ev-meta { display: flex; align-items: center; gap: 4px; font-size: 0.6875rem; color: var(--muted); }
+/* Conteúdo do card: título em destaque, hora e prioridade como metadados. */
+.fc .fc-event-main { height: 100%; }
+.fc-ev { container-type: inline-size; display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 1px 6px; height: 100%; overflow: hidden; line-height: 1.25; }
+.fc-ev-lead { order: 1; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.fc-ev-lead:empty { display: none; }
+.fc-ev-time { order: 2; font-family: var(--font-mono); font-size: 0.6875rem; color: color-mix(in srgb, var(--ink) 70%, var(--panel)); white-space: nowrap; }
+.fc-ev-prio { order: 3; margin-left: auto; padding: 0 5px; border-radius: 9999px; font-size: 0.625rem; font-weight: 700; line-height: 1.5; color: var(--ink); background: color-mix(in srgb, var(--prio) 28%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--prio) 50%, transparent); }
+.fc-ev-title { order: 4; flex: 1 1 100%; min-width: 0; color: var(--ink); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .fc-ev-project { width: 8px; height: 8px; border-radius: 9999px; flex: none; }
-.fc-ev-prio { margin-left: auto; font-weight: 700; color: var(--prio); }
-.fc-ev-title { overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.fc .fc-event.is-short .fc-ev-title { -webkit-line-clamp: 1; }
+.fc .fc-event.is-paused .fc-ev-title { text-decoration: line-through; color: var(--muted); }
+
+/* Eventos curtos (<30 min): uma linha só, título + hora + prioridade, sem estourar o card. */
+.fc .fc-timegrid-event.is-compact { padding: 0 6px !important; border-radius: 7px !important; border-left-width: 3px !important; box-shadow: none; backdrop-filter: none; font-size: 0.75rem !important; }
+.fc .fc-timegrid-event.is-compact .fc-ev { flex-wrap: nowrap; align-content: center; gap: 6px; }
+.fc .fc-timegrid-event.is-compact .fc-ev-lead { order: 1; }
+.fc .fc-timegrid-event.is-compact .fc-ev-title { order: 2; flex: 1 1 0; display: block; white-space: nowrap; text-overflow: ellipsis; }
+.fc .fc-timegrid-event.is-compact .fc-ev-time { order: 3; }
+.fc .fc-timegrid-event.is-compact .fc-ev-prio { order: 4; margin-left: 0; }
+
+/* Mês: sempre uma linha. */
+.fc .fc-daygrid-event .fc-ev { flex-wrap: nowrap; align-content: center; }
+.fc .fc-daygrid-event .fc-ev-title { order: 2; flex: 1 1 0; display: block; white-space: nowrap; text-overflow: ellipsis; }
+.fc .fc-daygrid-event .fc-ev-time { order: 3; }
+.fc .fc-daygrid-event .fc-ev-prio { order: 4; margin-left: 0; }
+
+/* Colunas estreitas: cede espaço ao título (o tooltip nativo guarda hora completa). */
+@container (max-width: 9.5rem) { .fc-ev-end { display: none; } }
+@container (max-width: 7.5rem) { .fc-ev-lead { display: none; } .is-compact .fc-ev-time { display: none; } }
+@container (max-width: 4.5rem) { .fc-ev-prio { display: none; } }
+
+/* Mobile: toolbar em duas linhas, alvos de toque maiores, grade com altura mínima útil. */
+.fc { min-height: 30rem; }
+@media (max-width: 640px) {
+  .fc .fc-toolbar { gap: 0.5rem; margin-bottom: 0.75rem; }
+  .fc .fc-toolbar-chunk:nth-child(2) { order: -1; flex-basis: 100%; }
+  .fc .fc-toolbar-title { font-size: 1.05rem !important; }
+  .fc .fc-timegrid-axis-cushion, .fc .fc-timegrid-slot-label-cushion { font-size: 0.6875rem; padding: 0 0.25rem; }
+  .fc .fc-col-header-cell-cushion { font-size: 0.75rem !important; }
+}
+@media (pointer: coarse) {
+  .fc .fc-button { min-height: 2.5rem; padding: 0 0.875rem !important; }
+}
 @media (prefers-reduced-motion: reduce) {
   .fc .fc-event { transition: none !important; }
   .fc .fc-event:hover { transform: none !important; }
