@@ -8,31 +8,82 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar as CalendarIcon,
+  CalendarDays,
   Plus,
+  Repeat,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { CALENDAR_TYPES, CALENDAR_TYPE_LABEL, calendarWriteSchema } from "rotina-bonette-shared";
+import {
+  CALENDAR_TYPES,
+  CALENDAR_TYPE_LABEL,
+  PRIORITIES,
+  PRIORITY_LABEL,
+  calendarWriteSchema,
+  routineWriteSchema,
+} from "rotina-bonette-shared";
+import type { Priority } from "rotina-bonette-shared";
 import type { z } from "zod";
 import { Button, Dialog, Field, controlClass } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
-import type { CalendarBlock, Project, Settings, Task } from "../../types";
+import { cx } from "../../lib/format";
+import { days } from "../routines/RoutinesPage";
+import type { CalendarBlock, Project, Routine, Settings, Task } from "../../types";
 
 type FormValues = z.infer<typeof calendarWriteSchema>;
-type Editor = { mode: "create"; start: string; end: string } | { mode: "edit"; block: CalendarBlock };
-
-const typeColor: Record<string, string> = {
-  DEEP_FOCUS: "#2563eb",
-  TASK: "#d97706",
-  ROUTINE: "#059669",
-  MEETING: "#dc2626",
-  PERSONAL: "#7c3aed",
+type RoutineValues = z.infer<typeof routineWriteSchema>;
+// Um editor serve para bloco avulso (uma data) e rotina fixa (toda semana).
+type Editor = {
+  kind: "block" | "routine";
+  block: CalendarBlock | null;
+  routine: Routine | null;
+  start: string;
+  end: string;
+  title?: string;
 };
+
+const priorityDot: Record<Priority, string> = {
+  P1: "bg-hot",
+  P2: "bg-strategy",
+  P3: "bg-warn",
+  P4: "bg-muted",
+};
+
+function pad(part: number) {
+  return String(part).padStart(2, "0");
+}
+
+function toTime(minutes: number) {
+  const clamped = Math.min(minutes, 24 * 60 - 1);
+  return `${pad(Math.floor(clamped / 60))}:${pad(clamped % 60)}`;
+}
+
+function PriorityPicker({ value, onChange }: { value: Priority; onChange: (value: Priority) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Prioridade" className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+      {PRIORITIES.map((item) => (
+        <button
+          key={item}
+          type="button"
+          role="radio"
+          aria-checked={value === item}
+          onClick={() => onChange(item)}
+          className={cx(
+            "flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-2.5 text-left text-xs font-semibold transition-colors duration-150",
+            value === item ? "border-focus bg-focus/10 text-ink" : "border-line bg-panel-2/60 text-muted hover:text-ink",
+          )}
+        >
+          <span className={cx("h-2.5 w-2.5 shrink-0 rounded-full", priorityDot[item])} />
+          {PRIORITY_LABEL[item]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function toLocalInput(value: string | Date) {
   const date = value instanceof Date ? value : new Date(value);
-  const pad = (part: number) => String(part).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
@@ -50,6 +101,7 @@ export function CalendarPage() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [hidden, setHidden] = useState<Priority[]>([]);
 
   const settings = useQuery({
     queryKey: ["settings"],
@@ -63,6 +115,10 @@ export function CalendarPage() {
     queryKey: ["tasks", "all"],
     queryFn: () => api<{ tasks: Task[] }>("/tasks"),
   });
+  const routines = useQuery({
+    queryKey: ["routines"],
+    queryFn: () => api<{ routines: Routine[] }>("/routines"),
+  });
   const blocks = useQuery({
     queryKey: ["calendar", range?.from, range?.to],
     enabled: Boolean(range),
@@ -73,33 +129,64 @@ export function CalendarPage() {
   });
 
   const form = useForm<FormValues>({ resolver: zodResolver(calendarWriteSchema) });
+  const routineForm = useForm<RoutineValues>({ resolver: zodResolver(routineWriteSchema) });
+  const blockPriority = form.watch("priority") ?? "P3";
+  const routinePriority = routineForm.watch("priority") ?? "P3";
+  const routineDays = routineForm.watch("daysOfWeek") ?? [];
 
   useEffect(() => {
     if (!editor) return;
-    const start = editor.mode === "create" ? editor.start : editor.block.startAt;
-    const end = editor.mode === "create" ? editor.end : editor.block.endAt;
-    const block = editor.mode === "edit" ? editor.block : null;
+    const { block, routine, start, end } = editor;
+    const startDate = new Date(start);
+    const minutes = Math.max(5, Math.round((new Date(end).getTime() - startDate.getTime()) / 60000));
     form.reset({
-      title: block?.title ?? "",
+      title: block?.title ?? editor.title ?? "",
       type: block?.type ?? "DEEP_FOCUS",
-      startAt: toLocalInput(start),
-      endAt: toLocalInput(end),
+      priority: block?.priority ?? "P3",
+      startAt: toLocalInput(block?.startAt ?? start),
+      endAt: toLocalInput(block?.endAt ?? end),
       projectId: block?.projectId ?? null,
       taskId: block?.taskId ?? null,
       notes: block?.notes ?? "",
     });
-  }, [editor, form]);
+    routineForm.reset({
+      name: routine?.name ?? editor.title ?? "",
+      type: routine?.type ?? "routine",
+      priority: routine?.priority ?? "P3",
+      enabled: routine?.enabled ?? true,
+      daysOfWeek: routine?.daysOfWeek ?? [startDate.getDay()],
+      startTime: routine?.startTime ?? `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`,
+      durationMinutes: routine?.durationMinutes ?? Math.min(minutes, 12 * 60),
+      projectId: routine?.projectId ?? null,
+      notes: routine?.notes ?? "",
+    });
+  }, [editor, form, routineForm]);
 
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["calendar"] }),
+      queryClient.invalidateQueries({ queryKey: ["routines"] }),
+    ]);
   }
 
   function openCreate(selection?: DateSelectArg) {
     const defaultRange = nextHourRange();
-    const start = selection?.start.toISOString() ?? defaultRange.start;
-    const end = selection?.end.toISOString() ?? defaultRange.end;
+    let start = selection?.start ?? new Date(defaultRange.start);
+    let end = selection?.end ?? new Date(defaultRange.end);
+    // Clique num dia inteiro (visão de mês): sugere 09:00-10:00 em vez de 24h.
+    if (selection?.allDay) {
+      start = new Date(selection.start);
+      start.setHours(9, 0, 0, 0);
+      end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
     setError(null);
-    setEditor({ mode: "create", start, end });
+    setEditor({ kind: "block", block: null, routine: null, start: start.toISOString(), end: end.toISOString() });
+  }
+
+  function switchKind(kind: Editor["kind"]) {
+    if (!editor || editor.kind === kind) return;
+    const title = (editor.kind === "routine" ? routineForm.getValues("name") : form.getValues("title")) ?? "";
+    setEditor({ ...editor, kind, title });
   }
 
   async function save(values: FormValues) {
@@ -113,7 +200,7 @@ export function CalendarPage() {
       notes: values.notes || null,
     };
     try {
-      if (editor?.mode === "edit") {
+      if (editor?.block) {
         await api(`/calendar/${editor.block.id}`, { method: "PATCH", body: JSON.stringify(body) });
       } else {
         await api("/calendar", { method: "POST", body: JSON.stringify(body) });
@@ -125,15 +212,32 @@ export function CalendarPage() {
     }
   }
 
-  async function remove() {
-    if (editor?.mode !== "edit") return;
+  async function saveRoutine(values: RoutineValues) {
     setError(null);
+    const body = { ...values, projectId: values.projectId || null, notes: values.notes || null };
     try {
-      await api(`/calendar/${editor.block.id}`, { method: "DELETE" });
+      if (editor?.routine) {
+        await api(`/routines/${editor.routine.id}`, { method: "PATCH", body: JSON.stringify(body) });
+      } else {
+        await api("/routines", { method: "POST", body: JSON.stringify(body) });
+      }
       setEditor(null);
       await refresh();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Não consegui apagar o bloco.");
+      setError(caught instanceof ApiError ? caught.message : "Não consegui salvar a rotina.");
+    }
+  }
+
+  async function remove() {
+    const target = editor?.routine ? `/routines/${editor.routine.id}` : editor?.block ? `/calendar/${editor.block.id}` : null;
+    if (!target) return;
+    setError(null);
+    try {
+      await api(target, { method: "DELETE" });
+      setEditor(null);
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Não consegui apagar.");
     }
   }
 
@@ -152,11 +256,36 @@ export function CalendarPage() {
     }
   }
 
-  // Filter blocks by project if chosen
-  const displayedBlocks = (blocks.data?.blocks ?? []).filter((block) => {
-    if (!selectedProject) return true;
-    return block.projectId === selectedProject;
-  });
+  const visible = (item: { priority: Priority; projectId: string | null }) =>
+    !hidden.includes(item.priority) && (!selectedProject || item.projectId === selectedProject);
+
+  // Rotinas viram eventos recorrentes nativos do FullCalendar (sem materializar no banco).
+  const events = [
+    ...(blocks.data?.blocks ?? []).filter(visible).map((block) => ({
+      id: block.id,
+      title: block.title,
+      start: block.startAt,
+      end: block.endAt,
+      classNames: [`prio-${block.priority}`],
+      extendedProps: { kind: "block", priority: block.priority, color: block.project?.color },
+    })),
+    ...(routines.data?.routines ?? [])
+      .filter((routine) => routine.enabled && visible(routine))
+      .map((routine) => {
+        const [h, m] = (routine.startTime ?? "00:00").split(":").map(Number);
+        return {
+          id: `routine-${routine.id}`,
+          title: routine.name,
+          daysOfWeek: routine.daysOfWeek,
+          ...(routine.startTime
+            ? { startTime: routine.startTime, endTime: toTime(h * 60 + m + routine.durationMinutes) }
+            : { allDay: true }),
+          editable: false,
+          classNames: [`prio-${routine.priority}`, "is-routine"],
+          extendedProps: { kind: "routine", priority: routine.priority, color: routine.project?.color },
+        };
+      }),
+  ];
 
   return (
     <div className="grid gap-5">
@@ -170,7 +299,7 @@ export function CalendarPage() {
             <h1 className="page-title">Calendário & Agenda</h1>
           </div>
           <p className="mt-1 text-xs text-muted">
-            Planejamento visual de tempo. Clique no intervalo desejado para reservar blocos de foco.
+            Arraste no calendário para criar. Rotinas fixas se repetem toda semana; o destaque do card segue a prioridade.
           </p>
         </div>
 
@@ -193,10 +322,35 @@ export function CalendarPage() {
           {/* New Block Button */}
           <Button onClick={() => openCreate()} className="h-9.5 px-4 text-xs">
             <Plus className="h-4 w-4" />
-            Novo bloco
+            Novo
           </Button>
         </div>
       </header>
+
+      {/* Legenda = filtro de prioridade */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por prioridade">
+        {PRIORITIES.map((item) => {
+          const off = hidden.includes(item);
+          return (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={!off}
+              onClick={() => setHidden(off ? hidden.filter((value) => value !== item) : [...hidden, item])}
+              className={cx(
+                "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors duration-150",
+                off ? "border-line bg-transparent text-muted line-through" : "border-line bg-panel text-ink hover:border-focus",
+              )}
+            >
+              <span className={cx("h-2.5 w-2.5 rounded-full", priorityDot[item], off && "opacity-40")} />
+              {PRIORITY_LABEL[item]}
+            </button>
+          );
+        })}
+        <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted">
+          <Repeat className="h-3.5 w-3.5" /> = rotina fixa
+        </span>
+      </div>
 
       {error && !editor ? (
         <div className="rounded-xl border border-hot/30 bg-hot/10 px-4 py-2.5 text-xs font-semibold text-hot">
@@ -225,84 +379,140 @@ export function CalendarPage() {
           selectMirror
           nowIndicator
           height="calc(100dvh - 14rem)"
-          allDaySlot={false}
-          slotMinTime="07:00:00"
-          slotMaxTime="22:00:00"
+          allDaySlot
+          slotMinTime="05:00:00"
+          slotMaxTime="24:00:00"
           slotDuration="00:30:00"
           scrollTime="08:00:00"
           eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
-          events={displayedBlocks.map((block) => {
-            const color = block.project?.color ?? typeColor[block.type];
-            return {
-              id: block.id,
-              title: block.title,
-              start: block.startAt,
-              end: block.endAt,
-              backgroundColor: `color-mix(in srgb, ${color} 24%, var(--panel))`,
-              borderColor: color,
-              textColor: "var(--ink)",
+          events={events}
+          eventDisplay="block"
+          eventContent={(arg) => {
+            const { kind, priority: prio, color } = arg.event.extendedProps as {
+              kind: string;
+              priority: Priority;
+              color?: string;
             };
-          })}
+            return (
+              <div className="fc-ev">
+                <div className="fc-ev-meta">
+                  {color ? <span className="fc-ev-project" style={{ background: color }} /> : null}
+                  {kind === "routine" ? <Repeat className="h-3 w-3 shrink-0" aria-label="Rotina fixa" /> : null}
+                  <span className="fc-ev-time">{arg.timeText}</span>
+                  <span className="fc-ev-prio">{prio}</span>
+                </div>
+                <div className="fc-ev-title">{arg.event.title}</div>
+              </div>
+            );
+          }}
           datesSet={(arg) => setRange({ from: arg.start.toISOString(), to: arg.end.toISOString() })}
           select={openCreate}
           eventDrop={(info) => void move(info)}
           eventResize={(info) => void move(info)}
           eventClick={(info: EventClickArg) => {
-            const block = blocks.data?.blocks.find((item) => item.id === info.event.id);
-            if (block) {
-              setError(null);
-              setEditor({ mode: "edit", block });
+            const id = info.event.id;
+            setError(null);
+            if (id.startsWith("routine-")) {
+              const routine = routines.data?.routines.find((item) => item.id === id.slice(8));
+              if (routine) {
+                const start = info.event.start ?? new Date();
+                setEditor({ kind: "routine", block: null, routine, start: start.toISOString(), end: start.toISOString() });
+              }
+              return;
             }
+            const block = blocks.data?.blocks.find((item) => item.id === id);
+            if (block) setEditor({ kind: "block", block, routine: null, start: block.startAt, end: block.endAt });
           }}
         />
       </div>
 
-      {/* Modal Dialog for Block Create & Edit */}
+      {/* Modal Dialog: bloco avulso ou rotina fixa */}
       <Dialog
         open={Boolean(editor)}
-        title={editor?.mode === "edit" ? "Editar Bloco de Agenda" : "Novo Bloco de Agenda"}
-        subtitle="Agende horários para foco profundo, reuniões ou tarefas"
+        title={editor?.routine ? "Editar rotina fixa" : editor?.block ? "Editar bloco" : "Novo item na agenda"}
+        subtitle={editor?.kind === "routine" ? "Repete toda semana nos dias escolhidos" : "Acontece só nesta data"}
         onClose={() => setEditor(null)}
       >
-        <form
-          className="grid gap-3.5"
-          data-testid="calendar-form"
-          onSubmit={form.handleSubmit(save)}
-        >
-          <Field label="Título do Bloco">
-            <input
-              className={controlClass}
-              placeholder="Ex: Foco na arquitetura da API..."
-              autoFocus
-              {...form.register("title")}
-            />
-          </Field>
-
-          <Field label="Tipo do Bloco">
-            <select className={controlClass} {...form.register("type")}>
-              {CALENDAR_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {CALENDAR_TYPE_LABEL[type]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Início">
-              <input className={controlClass} type="datetime-local" {...form.register("startAt")} />
-            </Field>
-            <Field label="Término">
-              <input className={controlClass} type="datetime-local" {...form.register("endAt")} />
-            </Field>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Projeto Vinculado">
-              <select
-                className={controlClass}
-                {...form.register("projectId", { setValueAs: (value) => value || null })}
+        {editor && !editor.block && !editor.routine ? (
+          <div role="tablist" aria-label="Tipo de item" className="mb-3.5 grid grid-cols-2 gap-1.5 rounded-xl bg-panel-2 p-1">
+            {([
+              ["block", "Só uma vez", CalendarDays],
+              ["routine", "Repetir toda semana", Repeat],
+            ] as const).map(([kind, label, Icon]) => (
+              <button
+                key={kind}
+                type="button"
+                role="tab"
+                aria-selected={editor.kind === kind}
+                onClick={() => switchKind(kind)}
+                className={cx(
+                  "flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-colors duration-150",
+                  editor.kind === kind ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink",
+                )}
               >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {editor?.kind === "routine" ? (
+          <form className="grid gap-3.5" data-testid="routine-form" onSubmit={routineForm.handleSubmit(saveRoutine)}>
+            <Field label="Nome">
+              <input className={controlClass} placeholder="Ex: Academia, Inglês, Revisão do dia..." autoFocus {...routineForm.register("name")} />
+            </Field>
+
+            <Field label="Prioridade">
+              <PriorityPicker value={routinePriority} onChange={(value) => routineForm.setValue("priority", value)} />
+            </Field>
+
+            <div className="grid gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">Dias</span>
+              <div className="flex flex-wrap gap-1.5">
+                {days.map((day) => {
+                  const on = routineDays.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        routineForm.setValue(
+                          "daysOfWeek",
+                          on ? routineDays.filter((value) => value !== day.value) : [...routineDays, day.value],
+                        )
+                      }
+                      className={cx(
+                        "min-h-11 min-w-11 cursor-pointer rounded-xl border px-2 text-xs font-semibold transition-colors duration-150",
+                        on ? "border-focus bg-focus text-white" : "border-line bg-panel-2/60 text-muted hover:text-ink",
+                      )}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="min-h-11 cursor-pointer rounded-xl px-2 text-xs font-semibold text-focus"
+                  onClick={() => routineForm.setValue("daysOfWeek", [0, 1, 2, 3, 4, 5, 6])}
+                >
+                  Todo dia
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Horário de início">
+                <input className={controlClass} type="time" {...routineForm.register("startTime")} />
+              </Field>
+              <Field label="Duração (min)">
+                <input className={controlClass} type="number" min={5} step={5} {...routineForm.register("durationMinutes", { valueAsNumber: true })} />
+              </Field>
+            </div>
+
+            <Field label="Projeto vinculado">
+              <select className={controlClass} {...routineForm.register("projectId", { setValueAs: (value) => value || null })}>
                 <option value="">Nenhum</option>
                 {projects.data?.projects.map((project) => (
                   <option key={project.id} value={project.id}>
@@ -312,56 +522,110 @@ export function CalendarPage() {
               </select>
             </Field>
 
-            <Field label="Tarefa Vinculada">
-              <select
-                className={controlClass}
-                {...form.register("taskId", { setValueAs: (value) => value || null })}
-              >
-                <option value="">Nenhuma</option>
-                {tasks.data?.tasks.map((task) => (
-                  <option key={task.id} value={task.id}>
-                    {task.title}
+            <Field label="Notas">
+              <textarea className={controlClass} rows={2} {...routineForm.register("notes")} />
+            </Field>
+
+            {routineForm.formState.errors.name ? (
+              <p className="text-xs font-semibold text-hot">{routineForm.formState.errors.name.message}</p>
+            ) : null}
+            {routineForm.formState.errors.durationMinutes ? (
+              <p className="text-xs font-semibold text-hot">Duração entre 5 e 720 minutos.</p>
+            ) : null}
+            {error ? <p className="text-xs font-semibold text-hot">{error}</p> : null}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
+              <Button type="submit">Salvar rotina</Button>
+              <Button type="button" variant="quiet" onClick={() => setEditor(null)}>
+                Cancelar
+              </Button>
+              {editor.routine ? (
+                <Button type="button" variant="danger" className="ml-auto" onClick={() => void remove()}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Apagar rotina
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        ) : (
+          <form className="grid gap-3.5" data-testid="calendar-form" onSubmit={form.handleSubmit(save)}>
+            <Field label="Título">
+              <input className={controlClass} placeholder="Ex: Foco na arquitetura da API..." autoFocus {...form.register("title")} />
+            </Field>
+
+            <Field label="Prioridade">
+              <PriorityPicker value={blockPriority} onChange={(value) => form.setValue("priority", value)} />
+            </Field>
+
+            <Field label="Tipo">
+              <select className={controlClass} {...form.register("type")}>
+                {CALENDAR_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {CALENDAR_TYPE_LABEL[type]}
                   </option>
                 ))}
               </select>
             </Field>
-          </div>
 
-          <Field label="Notas & Objetivos">
-            <textarea
-              className={controlClass}
-              rows={3}
-              placeholder="Anotações de preparação..."
-              {...form.register("notes")}
-            />
-          </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Início">
+                <input className={controlClass} type="datetime-local" {...form.register("startAt")} />
+              </Field>
+              <Field label="Término">
+                <input className={controlClass} type="datetime-local" {...form.register("endAt")} />
+              </Field>
+            </div>
 
-          {form.formState.errors.title ? (
-            <p className="text-xs font-semibold text-hot">{form.formState.errors.title.message}</p>
-          ) : null}
-          {form.formState.errors.endAt ? (
-            <p className="text-xs font-semibold text-hot">{form.formState.errors.endAt.message}</p>
-          ) : null}
-          {error ? <p className="text-xs font-semibold text-hot">{error}</p> : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Projeto vinculado">
+                <select className={controlClass} {...form.register("projectId", { setValueAs: (value) => value || null })}>
+                  <option value="">Nenhum</option>
+                  {projects.data?.projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
-            <Button type="submit">Salvar Bloco</Button>
-            <Button type="button" variant="quiet" onClick={() => setEditor(null)}>
-              Cancelar
-            </Button>
-            {editor?.mode === "edit" ? (
-              <Button
-                type="button"
-                variant="danger"
-                className="ml-auto"
-                onClick={() => void remove()}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Apagar
-              </Button>
+              <Field label="Tarefa vinculada">
+                <select className={controlClass} {...form.register("taskId", { setValueAs: (value) => value || null })}>
+                  <option value="">Nenhuma</option>
+                  {tasks.data?.tasks.map((task) => (
+                    <option key={task.id} value={task.id}>
+                      {task.title}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Notas">
+              <textarea className={controlClass} rows={3} placeholder="Anotações de preparação..." {...form.register("notes")} />
+            </Field>
+
+            {form.formState.errors.title ? (
+              <p className="text-xs font-semibold text-hot">{form.formState.errors.title.message}</p>
             ) : null}
-          </div>
-        </form>
+            {form.formState.errors.endAt ? (
+              <p className="text-xs font-semibold text-hot">{form.formState.errors.endAt.message}</p>
+            ) : null}
+            {error ? <p className="text-xs font-semibold text-hot">{error}</p> : null}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
+              <Button type="submit">Salvar bloco</Button>
+              <Button type="button" variant="quiet" onClick={() => setEditor(null)}>
+                Cancelar
+              </Button>
+              {editor?.block ? (
+                <Button type="button" variant="danger" className="ml-auto" onClick={() => void remove()}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Apagar
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
       </Dialog>
     </div>
   );

@@ -159,6 +159,7 @@ model CalendarBlock {
   taskId    String?
   task      Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
   type      CalendarType
+  priority  Priority     @default(P3)
   startAt   DateTime
   endAt     DateTime
   notes     String?
@@ -178,6 +179,7 @@ model Routine {
   startTime       String?
   durationMinutes Int
   type            String
+  priority        Priority @default(P3)
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

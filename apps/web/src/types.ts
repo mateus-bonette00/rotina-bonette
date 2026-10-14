@@ -75,6 +75,7 @@ export type CalendarBlock = {
   projectId: string | null;
   taskId: string | null;
   type: CalendarType;
+  priority: Priority;
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -91,6 +92,7 @@ export type Routine = {
   startTime: string | null;
   durationMinutes: number;
   type: string;
+  priority: Priority;
   notes: string | null;
   project?: { id: string; name: string; color: string } | null;
 };

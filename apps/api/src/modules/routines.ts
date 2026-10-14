@@ -35,6 +35,7 @@ routinesRouter.post(
         startTime: input.startTime ?? null,
         durationMinutes: input.durationMinutes,
         type: input.type,
+        priority: input.priority ?? "P3",
         notes: input.notes ?? null,
       },
     });
@@ -58,6 +59,7 @@ routinesRouter.patch(
         ...(input.startTime !== undefined ? { startTime: input.startTime } : {}),
         ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
         ...(input.type !== undefined ? { type: input.type } : {}),
+        ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       },
     });

@@ -17,7 +17,7 @@ import { api } from "../../lib/api";
 import { cx } from "../../lib/format";
 import type { Project, Routine } from "../../types";
 
-const days = [
+export const days = [
   { value: 1, label: "Seg" },
   { value: 2, label: "Ter" },
   { value: 3, label: "Qua" },

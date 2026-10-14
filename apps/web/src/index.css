@@ -300,6 +300,30 @@ input[type="color"] {
   backdrop-filter: blur(4px);
 }
 
+/* Prioridade muda o peso visual do card: P1 forte e sólido, P4 apagado e tracejado. */
+.fc .fc-event {
+  --prio: var(--warn);
+  --prio-fill: 14%;
+  background: color-mix(in srgb, var(--prio) var(--prio-fill), var(--panel)) !important;
+  border-color: color-mix(in srgb, var(--prio) 55%, transparent) !important;
+  border-left: 4px solid var(--prio) !important;
+  color: var(--ink) !important;
+}
+.fc .fc-event.prio-P1 { --prio: var(--hot); --prio-fill: 30%; font-weight: 700 !important; box-shadow: 0 0 0 1px var(--prio), 0 4px 14px -4px color-mix(in srgb, var(--prio) 55%, transparent); }
+.fc .fc-event.prio-P2 { --prio: var(--strategy); --prio-fill: 22%; }
+.fc .fc-event.prio-P3 { --prio: var(--warn); --prio-fill: 14%; }
+.fc .fc-event.prio-P4 { --prio: var(--muted); --prio-fill: 8%; border-style: dashed !important; opacity: 0.8; }
+.fc .fc-event.is-routine { background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--prio) 8%, transparent) 6px 12px); }
+.fc-ev { display: grid; gap: 1px; overflow: hidden; line-height: 1.25; }
+.fc-ev-meta { display: flex; align-items: center; gap: 4px; font-size: 0.6875rem; color: var(--muted); }
+.fc-ev-project { width: 8px; height: 8px; border-radius: 9999px; flex: none; }
+.fc-ev-prio { margin-left: auto; font-weight: 700; color: var(--prio); }
+.fc-ev-title { overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  .fc .fc-event { transition: none !important; }
+  .fc .fc-event:hover { transform: none !important; }
+}
+
 .fc .fc-timegrid-event:hover,
 .fc .fc-daygrid-event:hover {
   transform: translateY(-1px) scale(1.01);
