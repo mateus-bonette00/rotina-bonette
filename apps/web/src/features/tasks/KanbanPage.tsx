@@ -1,13 +1,28 @@
 import {
-  closestCorners,
+  closestCenter,
   DndContext,
-  PointerSensor,
+  DragOverlay,
+  getFirstCollision,
+  KeyboardSensor,
+  MouseSensor,
+  pointerWithin,
+  rectIntersection,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,7 +39,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   TASK_STATUSES,
   TASK_STATUS_LABEL,
@@ -37,6 +53,9 @@ import type { Project, Task } from "../../types";
 import { TaskDialog, type TaskDraft } from "./TaskDialog";
 
 type MoveVars = { id: string; status: TaskStatus; confirmReplace?: boolean; orderedIds?: string[] };
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Troca de lugar, dentro da lista de tarefas, as que estão em `ids` seguindo a nova ordem.
 function applyOrder(list: Task[], ids: string[]) {
@@ -111,7 +130,12 @@ export function KanbanPage() {
     }
   }, [customTaskMap]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // Mouse arrasta após 6px; toque exige segurar 200ms para não brigar com a rolagem da página.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const tasks = useQuery({
     queryKey: ["tasks", projectId, priority],
@@ -142,12 +166,12 @@ export function KanbanPage() {
       await queryClient.invalidateQueries();
     },
     onError: (caught, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] }); // desfaz a posição otimista
       if (caught instanceof ApiError && caught.code === "DOING_LIMIT_REACHED") {
         setPending(vars);
         return;
       }
       setError(caught instanceof ApiError ? caught.message : "Não movi a tarefa.");
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
@@ -166,7 +190,7 @@ export function KanbanPage() {
   }, [tasks.data, searchQuery]);
 
   // Group tasks into the user's columns
-  const columnTaskMap = useMemo(() => {
+  const baseTaskMap = useMemo(() => {
     const map = new Map<string, Task[]>();
     for (const col of columns) {
       map.set(col.id, []);
@@ -233,48 +257,149 @@ export function KanbanPage() {
     setCustomTaskMap({});
   }
 
-  function onDragEnd(event: DragEndEvent) {
-    const taskId = String(event.active.id);
-    const overId = event.over ? String(event.over.id) : "";
-    const list = tasks.data?.tasks ?? [];
-    const task = list.find((item) => item.id === taskId);
-    if (!task || !overId || overId === taskId) return;
+  // --- Arrastar e soltar (estilo Trello) ---
+  // Durante o arraste o card muda de lista "ao vivo" só em `preview`; o servidor só é chamado ao soltar.
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Record<string, string[]> | null>(null);
+  const dragging = useRef(false);
+  const lastOverId = useRef<string | null>(null);
+  const recentlyMoved = useRef(false);
 
-    // Soltou sobre outro card ou sobre a lista (fim da lista).
-    const overTask = list.find((item) => item.id === overId);
-    const targetColId = overTask ? customTaskMap[overTask.id] || overTask.status : overId;
-    const targetCol =
-      columns.find((c) => c.id === targetColId) ||
-      (overTask ? columns.find((c) => c.status === overTask.status) : undefined);
-    if (!targetCol) return;
+  const taskById = useMemo(() => new Map((tasks.data?.tasks ?? []).map((t) => [t.id, t])), [tasks.data]);
+  const columnIds = useMemo(() => new Set(columns.map((c) => c.id)), [columns]);
+  const activeTask = activeId ? taskById.get(activeId) : undefined;
 
-    const ids = (columnTaskMap.get(targetCol.id) ?? []).map((item) => item.id);
-    const from = ids.indexOf(task.id);
-    const to = overTask ? ids.indexOf(overTask.id) : from >= 0 ? ids.length - 1 : ids.length;
-    if (from === to) return;
-    const orderedIds =
-      from >= 0 ? arrayMove(ids, from, to) : [...ids.slice(0, to), task.id, ...ids.slice(to)];
+  const columnTaskMap = useMemo(() => {
+    if (!preview) return baseTaskMap;
+    const map = new Map<string, Task[]>();
+    for (const [colId, ids] of Object.entries(preview)) {
+      map.set(colId, ids.flatMap((id) => taskById.get(id) ?? []));
+    }
+    return map;
+  }, [preview, baseTaskMap, taskById]);
 
-    // Listas customizadas vivem só no navegador; o status real continua no backend.
+  // Depois de soltar o preview fica até o cache refletir a nova ordem (evita o card "piscar" de volta).
+  useEffect(() => {
+    if (!dragging.current) setPreview(null);
+  }, [tasks.data]);
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      recentlyMoved.current = false;
+    });
+  }, [preview]);
+
+  function findContainer(id: string, map: Record<string, string[]>) {
+    return columnIds.has(id) ? id : Object.keys(map).find((key) => map[key].includes(id));
+  }
+
+  // Ponteiro manda; sobre uma lista, escolhe o card mais próximo dela (ou o fim, se vazia).
+  const collisionDetection = useCallback<CollisionDetection>(
+    (args) => {
+      const hits = pointerWithin(args);
+      let overId = getFirstCollision(hits.length ? hits : rectIntersection(args), "id");
+      if (overId != null) {
+        const ids = preview?.[String(overId)];
+        if (ids?.length) {
+          overId =
+            closestCenter({
+              ...args,
+              droppableContainers: args.droppableContainers.filter((c) => ids.includes(String(c.id))),
+            })[0]?.id ?? overId;
+        }
+        lastOverId.current = String(overId);
+        return [{ id: overId }];
+      }
+      if (recentlyMoved.current) lastOverId.current = String(args.active.id);
+      return lastOverId.current ? [{ id: lastOverId.current }] : [];
+    },
+    [preview],
+  );
+
+  function onDragStart(event: DragStartEvent) {
+    dragging.current = true;
+    lastOverId.current = null;
+    setActiveId(String(event.active.id));
+    const snapshot: Record<string, string[]> = {};
+    for (const col of columns) snapshot[col.id] = (baseTaskMap.get(col.id) ?? []).map((t) => t.id);
+    setPreview(snapshot);
+  }
+
+  function onDragOver({ active, over }: DragOverEvent) {
+    if (!over || !preview) return;
+    const activeKey = String(active.id);
+    const overId = String(over.id);
+    const from = findContainer(activeKey, preview);
+    const to = findContainer(overId, preview);
+    if (!from || !to || from === to) return;
+
+    const overItems = preview[to];
+    const translated = active.rect.current.translated;
+    const below = translated && translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2;
+    const overIndex = overItems.indexOf(overId);
+    const index = overIndex < 0 ? overItems.length : overIndex + (below ? 1 : 0);
+
+    recentlyMoved.current = true;
+    setPreview({
+      ...preview,
+      [from]: preview[from].filter((id) => id !== activeKey),
+      [to]: [...overItems.slice(0, index), activeKey, ...overItems.slice(index)],
+    });
+  }
+
+  function endDrag() {
+    dragging.current = false;
+    lastOverId.current = null;
+    setActiveId(null);
+  }
+
+  function cancelDrag() {
+    endDrag();
+    setPreview(null);
+  }
+
+  function persistOrder(status: TaskStatus, orderedIds: string[]) {
+    void api("/tasks/reorder", { method: "POST", body: JSON.stringify({ status, orderedIds }) })
+      .catch((caught) => setError(caught instanceof ApiError ? caught.message : "Não consegui salvar a ordem."))
+      .finally(() => queryClient.invalidateQueries({ queryKey: ["tasks"] }));
+  }
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    const map = preview;
+    const activeKey = String(active.id);
+    const task = taskById.get(activeKey);
+    if (!map || !over || !task) return cancelDrag();
+
+    const colId = findContainer(activeKey, map);
+    const targetCol = columns.find((c) => c.id === colId);
+    if (!colId || !targetCol) return cancelDrag();
+
+    let ids = map[colId];
+    const from = ids.indexOf(activeKey);
+    const to = ids.indexOf(String(over.id));
+    if (to >= 0 && to !== from) ids = arrayMove(ids, from, to);
+
+    const originalIds = (baseTaskMap.get(colId) ?? []).map((t) => t.id);
+    if (ids.length === originalIds.length && ids.every((id, i) => id === originalIds[i])) return cancelDrag();
+
+    endDrag();
+    setPreview({ ...map, [colId]: ids });
+
+    // Listas vivem só no navegador; o status real continua no backend.
     setCustomTaskMap((prev) => {
       const next = { ...prev };
       if (targetCol.isCustom) next[task.id] = targetCol.id;
       else delete next[task.id];
       return next;
     });
+    queryClient.setQueryData<{ tasks: Task[] }>(["tasks", projectId, priority], (old) =>
+      old
+        ? { tasks: applyOrder(old.tasks.map((t) => (t.id === task.id ? { ...t, status: targetCol.status } : t)), ids) }
+        : old,
+    );
 
-    if (targetCol.status === task.status) {
-      queryClient.setQueryData<{ tasks: Task[] }>(["tasks", projectId, priority], (old) =>
-        old ? { tasks: applyOrder(old.tasks, orderedIds) } : old,
-      );
-      void api("/tasks/reorder", {
-        method: "POST",
-        body: JSON.stringify({ status: targetCol.status, orderedIds }),
-      }).finally(() => queryClient.invalidateQueries({ queryKey: ["tasks"] }));
-      return;
-    }
-
-    move.mutate({ id: task.id, status: targetCol.status, orderedIds });
+    if (targetCol.status === task.status) persistOrder(targetCol.status, ids);
+    else move.mutate({ id: task.id, status: targetCol.status, orderedIds: ids });
   }
 
   return (
@@ -395,7 +520,14 @@ export function KanbanPage() {
       ) : null}
 
       {/* Kanban Board Horizontal Scroll Track */}
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        onDragCancel={cancelDrag}
+      >
         <div className="relative z-10 w-full flex items-start gap-3.5 overflow-x-auto overflow-y-visible pb-4 pt-1 select-none">
           {columns.map((column) => {
             const colTasks = columnTaskMap.get(column.id) ?? [];
@@ -404,6 +536,7 @@ export function KanbanPage() {
                 key={column.id}
                 column={column}
                 tasks={colTasks}
+                highlight={activeId !== null && colTasks.some((t) => t.id === activeId)}
                 onMove={(id, next) => move.mutate({ id, status: next })}
                 onCreateTask={(initialTitle) => {
                   if (initialTitle) {
@@ -481,6 +614,12 @@ export function KanbanPage() {
             )}
           </div>
         </div>
+        {createPortal(
+          <DragOverlay dropAnimation={prefersReducedMotion() ? null : undefined}>
+            {activeTask ? <CardOverlay task={activeTask} /> : null}
+          </DragOverlay>,
+          document.body,
+        )}
       </DndContext>
 
       {/* Bottom Switcher Dock (like in the print: Caixa de entrada | Planejador | Quadro | Mudar de quadros) */}
@@ -546,6 +685,7 @@ export function KanbanPage() {
 
 function Column({
   column,
+  highlight,
   tasks,
   onMove,
   onCreateTask,
@@ -554,6 +694,7 @@ function Column({
   onRemove,
 }: {
   column: KanbanColumnConfig;
+  highlight: boolean;
   tasks: Task[];
   onMove: (id: string, status: TaskStatus) => void;
   onCreateTask: (initialTitle?: string) => void;
@@ -590,7 +731,7 @@ function Column({
       data-testid={`column-${column.status}`}
       className={cx(
         "flex h-fit w-72 shrink-0 flex-col rounded-2xl border border-white/[0.08] bg-[#101418]/90 backdrop-blur-sm p-3 shadow-lg transition-colors duration-150",
-        drop.isOver && "border-focus ring-2 ring-focus/25 bg-[#141a22]",
+        highlight && "border-focus/60 bg-[#141a22]",
       )}
     >
       {/* Column Header */}
@@ -747,6 +888,10 @@ function Column({
   );
 }
 
+const cardClass =
+  "group relative rounded-xl border border-[#2c333a] bg-[#22272b] p-3 shadow-sm transition-colors duration-150 hover:border-white/20 hover:bg-[#282e33]";
+
+// Clique em qualquer parte do card abre a edição (o clique que termina um arraste é descartado pelo dnd-kit).
 function CardTask({
   task,
   onMove,
@@ -756,10 +901,7 @@ function CardTask({
   onMove: (id: string, status: TaskStatus) => void;
   onEdit: (task: Task) => void;
 }) {
-  const drag = useSortable({ id: task.id });
-
-  // Compute label color bar on top of the card
-  const labelColor = task.project?.color ?? (task.priority === "P1" ? "#f85149" : task.priority === "P2" ? "#d29922" : null);
+  const drag = useSortable({ id: task.id, transition: prefersReducedMotion() ? null : undefined });
 
   return (
     <article
@@ -769,12 +911,34 @@ function CardTask({
         transition: drag.transition,
       }}
       className={cx(
-        "group relative rounded-xl border border-[#2c333a] bg-[#22272b] p-3 shadow-sm transition hover:border-white/20 hover:bg-[#282e33] cursor-grab active:cursor-grabbing",
-        drag.isDragging && "opacity-60 ring-2 ring-focus rotate-1 shadow-2xl z-20",
+        cardClass,
+        "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-focus",
+        drag.isDragging && "border-dashed border-white/20 bg-white/[0.04] shadow-none [&>*]:invisible",
       )}
-      {...drag.listeners}
+      onClick={() => onEdit(task)}
       {...drag.attributes}
+      {...drag.listeners}
     >
+      <CardBody task={task} onMove={onMove} />
+    </article>
+  );
+}
+
+// Cópia que segue o mouse durante o arraste.
+function CardOverlay({ task }: { task: Task }) {
+  return (
+    <article className={cx(cardClass, "cursor-grabbing rotate-2 border-focus/60 bg-[#282e33] shadow-2xl ring-2 ring-focus/40")}>
+      <CardBody task={task} onMove={() => undefined} />
+    </article>
+  );
+}
+
+function CardBody({ task, onMove }: { task: Task; onMove: (id: string, status: TaskStatus) => void }) {
+  // Compute label color bar on top of the card
+  const labelColor = task.project?.color ?? (task.priority === "P1" ? "#f85149" : task.priority === "P2" ? "#d29922" : null);
+
+  return (
+    <>
       {/* Top Color Label Strip (like Trello cards in user's print) */}
       {labelColor ? (
         <div
@@ -788,8 +952,6 @@ function CardTask({
       <button
         type="button"
         className="w-full text-left text-xs font-semibold leading-snug text-[#e6edf3] group-hover:text-white cursor-pointer line-clamp-3"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={() => onEdit(task)}
       >
         {task.title}
       </button>
@@ -845,6 +1007,6 @@ function CardTask({
           </select>
         </div>
       </div>
-    </article>
+    </>
   );
 }

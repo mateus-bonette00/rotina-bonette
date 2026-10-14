@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Prisma, TaskStatus } from "@prisma/client";
 import { moveTaskSchema, reorderTasksSchema, taskPatchSchema, taskWriteSchema } from "rotina-bonette-shared";
-import { AppError, notFound } from "../lib/errors.js";
+import { notFound } from "../lib/errors.js";
 import { asDate, asyncHandler, parse } from "../lib/http.js";
 import { presentTask, presentTasks, taskInclude, type TaskWithProject } from "../lib/present.js";
 import { prisma } from "../lib/prisma.js";
@@ -191,9 +191,7 @@ tasksRouter.post(
     await prisma.$transaction(async (tx) => {
       const tasks = await tx.task.findMany({ where: { id: { in: input.orderedIds } } });
       if (tasks.length !== input.orderedIds.length) throw notFound("Tarefa não encontrada.");
-      if (tasks.some((task) => task.status !== input.status)) {
-        throw new AppError(409, "CONFLICT", "Reordene só tarefas que já estão nesta coluna.");
-      }
+      // Listas do quadro vivem no navegador e podem misturar status; aqui só a ordem importa.
       for (const [index, id] of input.orderedIds.entries()) {
         await tx.task.update({ where: { id }, data: { sortOrder: index } });
       }
