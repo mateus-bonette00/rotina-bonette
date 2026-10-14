@@ -270,16 +270,15 @@ export function CalendarPage() {
       extendedProps: { kind: "block", priority: block.priority, color: block.project?.color },
     })),
     ...(routines.data?.routines ?? [])
-      .filter((routine) => routine.enabled && visible(routine))
+      .filter((routine) => routine.enabled && routine.startTime && visible(routine))
       .map((routine) => {
         const [h, m] = (routine.startTime ?? "00:00").split(":").map(Number);
         return {
           id: `routine-${routine.id}`,
           title: routine.name,
           daysOfWeek: routine.daysOfWeek,
-          ...(routine.startTime
-            ? { startTime: routine.startTime, endTime: toTime(h * 60 + m + routine.durationMinutes) }
-            : { allDay: true }),
+          startTime: routine.startTime!,
+          endTime: toTime(h * 60 + m + routine.durationMinutes),
           editable: false,
           classNames: [`prio-${routine.priority}`, "is-routine"],
           extendedProps: { kind: "routine", priority: routine.priority, color: routine.project?.color },
@@ -379,7 +378,7 @@ export function CalendarPage() {
           selectMirror
           nowIndicator
           height="calc(100dvh - 14rem)"
-          allDaySlot
+          allDaySlot={false}
           slotMinTime="05:00:00"
           slotMaxTime="24:00:00"
           slotDuration="00:30:00"
