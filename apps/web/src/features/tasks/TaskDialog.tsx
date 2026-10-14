@@ -70,6 +70,7 @@ export function TaskDialog({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [needsReplace, setNeedsReplace] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const form = useForm<FormValues>({ resolver: zodResolver(taskWriteSchema), defaultValues: empty("INBOX") });
 
   useEffect(() => {
@@ -112,6 +113,7 @@ export function TaskDialog({
   async function remove() {
     if (draft?.mode !== "edit") return;
     setError(null);
+    setConfirmDelete(false);
     try {
       await api(`/tasks/${draft.task.id}`, { method: "DELETE" });
       onClose();
@@ -124,6 +126,7 @@ export function TaskDialog({
   const isEdit = draft?.mode === "edit";
 
   return (
+    <>
     <Dialog
       open={Boolean(draft)}
       title={isEdit ? "Editar Tarefa" : "Nova Tarefa"}
@@ -280,22 +283,38 @@ export function TaskDialog({
 
         {/* Footer actions */}
         <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2 border-t border-line/60 pt-4">
-          <Button type="submit">Salvar Tarefa</Button>
-          {needsReplace ? (
-            <Button type="button" variant="ghost" onClick={form.handleSubmit((values) => save(values, true))}>
-              Trocar a tarefa em execução
-            </Button>
-          ) : null}
-          <Button type="button" variant="quiet" onClick={onClose}>
-            Cancelar
-          </Button>
           {isEdit ? (
-            <Button type="button" variant="danger" className="ml-auto" onClick={() => void remove()}>
+            <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)}>
               Apagar Tarefa
             </Button>
           ) : null}
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button type="submit">Salvar Tarefa</Button>
+            {needsReplace ? (
+              <Button type="button" variant="ghost" onClick={form.handleSubmit((values) => save(values, true))}>
+                Trocar a tarefa em execução
+              </Button>
+            ) : null}
+            <Button type="button" variant="quiet" onClick={onClose}>
+              Cancelar
+            </Button>
+          </div>
         </div>
       </form>
     </Dialog>
+    <Dialog open={confirmDelete} title="Apagar tarefa?" onClose={() => setConfirmDelete(false)}>
+      <p className="text-sm text-muted">
+        Tem certeza que quer apagar{draft?.mode === "edit" ? ` "${draft.task.title}"` : " esta tarefa"}? Essa ação não pode ser desfeita.
+      </p>
+      <div className="mt-4 flex gap-2">
+        <Button type="button" variant="danger" data-testid="confirm-delete" onClick={() => void remove()}>
+          Apagar
+        </Button>
+        <Button type="button" variant="quiet" onClick={() => setConfirmDelete(false)}>
+          Cancelar
+        </Button>
+      </div>
+    </Dialog>
+    </>
   );
 }

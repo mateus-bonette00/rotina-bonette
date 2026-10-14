@@ -1,13 +1,14 @@
 import {
+  closestCorners,
   DndContext,
   PointerSensor,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -35,7 +36,14 @@ import { cx } from "../../lib/format";
 import type { Project, Task } from "../../types";
 import { TaskDialog, type TaskDraft } from "./TaskDialog";
 
-type MoveVars = { id: string; status: TaskStatus; confirmReplace?: boolean };
+type MoveVars = { id: string; status: TaskStatus; confirmReplace?: boolean; orderedIds?: string[] };
+
+// Troca de lugar, dentro da lista de tarefas, as que estão em `ids` seguindo a nova ordem.
+function applyOrder(list: Task[], ids: string[]) {
+  const byId = new Map(list.map((t) => [t.id, t]));
+  let i = 0;
+  return list.map((t) => (ids.includes(t.id) ? byId.get(ids[i++])! : t));
+}
 
 export type KanbanColumnConfig = {
   id: string; // TaskStatus or custom id like "custom_123"
@@ -122,7 +130,12 @@ export function KanbanPage() {
   });
 
   const move = useMutation({
-    mutationFn: (vars: MoveVars) => api(`/tasks/${vars.id}/move`, { method: "POST", body: JSON.stringify(vars) }),
+    mutationFn: async ({ orderedIds, ...vars }: MoveVars) => {
+      await api(`/tasks/${vars.id}/move`, { method: "POST", body: JSON.stringify(vars) });
+      if (orderedIds) {
+        await api("/tasks/reorder", { method: "POST", body: JSON.stringify({ status: vars.status, orderedIds }) });
+      }
+    },
     onSuccess: async () => {
       setError(null);
       setPending(null);
@@ -223,58 +236,45 @@ export function KanbanPage() {
   function onDragEnd(event: DragEndEvent) {
     const taskId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : "";
-    const task = tasks.data?.tasks.find((item) => item.id === taskId);
-    if (!task || !overId) return;
+    const list = tasks.data?.tasks ?? [];
+    const task = list.find((item) => item.id === taskId);
+    if (!task || !overId || overId === taskId) return;
 
-    // Is over a column?
-    let targetCol = columns.find((c) => c.id === overId);
-    let overTask: Task | undefined;
-
-    if (!targetCol) {
-      // Dropped over another task
-      overTask = tasks.data?.tasks.find((item) => item.id === overId);
-      if (overTask) {
-        // find which column contains overTask
-        const targetColId = customTaskMap[overTask.id] || overTask.status;
-        targetCol =
-          columns.find((c) => c.id === targetColId) ||
-          columns.find((c) => c.status === overTask?.status) ||
-          columns[0];
-      }
-    }
-
+    // Soltou sobre outro card ou sobre a lista (fim da lista).
+    const overTask = list.find((item) => item.id === overId);
+    const targetColId = overTask ? customTaskMap[overTask.id] || overTask.status : overId;
+    const targetCol =
+      columns.find((c) => c.id === targetColId) ||
+      (overTask ? columns.find((c) => c.status === overTask.status) : undefined);
     if (!targetCol) return;
 
-    // If moving to a custom column, update task mapping
-    if (targetCol.isCustom) {
-      setCustomTaskMap((prev) => ({ ...prev, [task.id]: targetCol!.id }));
-    } else {
-      setCustomTaskMap((prev) => {
-        const next = { ...prev };
-        delete next[task.id];
-        return next;
-      });
-    }
+    const ids = (columnTaskMap.get(targetCol.id) ?? []).map((item) => item.id);
+    const from = ids.indexOf(task.id);
+    const to = overTask ? ids.indexOf(overTask.id) : from >= 0 ? ids.length - 1 : ids.length;
+    if (from === to) return;
+    const orderedIds =
+      from >= 0 ? arrayMove(ids, from, to) : [...ids.slice(0, to), task.id, ...ids.slice(to)];
 
-    const nextStatus = targetCol.status;
+    // Listas customizadas vivem só no navegador; o status real continua no backend.
+    setCustomTaskMap((prev) => {
+      const next = { ...prev };
+      if (targetCol.isCustom) next[task.id] = targetCol.id;
+      else delete next[task.id];
+      return next;
+    });
 
-    // Check if reordering within the same status
-    if (nextStatus === task.status && !targetCol.isCustom) {
-      if (!overTask || overTask.id === task.id) return;
-      const tasksInCol = columnTaskMap.get(targetCol.id) ?? [];
-      const ids = tasksInCol.map((item) => item.id);
-      const from = ids.indexOf(task.id);
-      const to = ids.indexOf(overTask.id);
-      if (from < 0 || to < 0 || from === to) return;
-      const orderedIds = arrayMove(ids, from, to);
+    if (targetCol.status === task.status) {
+      queryClient.setQueryData<{ tasks: Task[] }>(["tasks", projectId, priority], (old) =>
+        old ? { tasks: applyOrder(old.tasks, orderedIds) } : old,
+      );
       void api("/tasks/reorder", {
         method: "POST",
-        body: JSON.stringify({ status: nextStatus, orderedIds }),
-      }).then(() => queryClient.invalidateQueries({ queryKey: ["tasks"] }));
+        body: JSON.stringify({ status: targetCol.status, orderedIds }),
+      }).finally(() => queryClient.invalidateQueries({ queryKey: ["tasks"] }));
       return;
     }
 
-    move.mutate({ id: task.id, status: nextStatus });
+    move.mutate({ id: task.id, status: targetCol.status, orderedIds });
   }
 
   return (
@@ -395,7 +395,7 @@ export function KanbanPage() {
       ) : null}
 
       {/* Kanban Board Horizontal Scroll Track */}
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
         <div className="relative z-10 w-full flex items-start gap-3.5 overflow-x-auto overflow-y-visible pb-4 pt-1 select-none">
           {columns.map((column) => {
             const colTasks = columnTaskMap.get(column.id) ?? [];
@@ -682,9 +682,11 @@ function Column({
 
       {/* Cards List with Smooth Scroll */}
       <div className="space-y-2 pr-1">
-        {tasks.map((task) => (
-          <CardTask key={task.id} task={task} onMove={onMove} onEdit={onEditTask} />
-        ))}
+        <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map((task) => (
+            <CardTask key={task.id} task={task} onMove={onMove} onEdit={onEditTask} />
+          ))}
+        </SortableContext>
 
         {/* Inline Card Creation Composer */}
         {isAddingCard ? (
@@ -754,7 +756,7 @@ function CardTask({
   onMove: (id: string, status: TaskStatus) => void;
   onEdit: (task: Task) => void;
 }) {
-  const drag = useDraggable({ id: task.id });
+  const drag = useSortable({ id: task.id });
 
   // Compute label color bar on top of the card
   const labelColor = task.project?.color ?? (task.priority === "P1" ? "#f85149" : task.priority === "P2" ? "#d29922" : null);
@@ -763,7 +765,8 @@ function CardTask({
     <article
       ref={drag.setNodeRef}
       style={{
-        transform: drag.transform ? `translate3d(${drag.transform.x}px, ${drag.transform.y}px, 0)` : undefined,
+        transform: CSS.Transform.toString(drag.transform),
+        transition: drag.transition,
       }}
       className={cx(
         "group relative rounded-xl border border-[#2c333a] bg-[#22272b] p-3 shadow-sm transition hover:border-white/20 hover:bg-[#282e33] cursor-grab active:cursor-grabbing",
