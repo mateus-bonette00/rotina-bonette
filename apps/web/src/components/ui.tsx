@@ -144,7 +144,7 @@ export function Dialog({
           <X className="h-4 w-4" strokeWidth={2} aria-hidden />
         </button>
       </div>
-      <div className="mt-4 flex min-h-0 flex-col">{children}</div>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">{children}</div>
     </dialog>
   );
 }

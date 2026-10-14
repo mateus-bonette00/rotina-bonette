@@ -22,12 +22,13 @@ function dateOrNull(value: Date | null): string | null {
 }
 
 export async function exportData() {
-  const [projects, tasks, ideas, calendarBlocks, routines, focusSessions, settings] = await Promise.all([
+  const [projects, tasks, ideas, calendarBlocks, routines, routineExceptions, focusSessions, settings] = await Promise.all([
     prisma.project.findMany(),
     prisma.task.findMany(),
     prisma.idea.findMany(),
     prisma.calendarBlock.findMany(),
     prisma.routine.findMany(),
+    prisma.routineException.findMany(),
     prisma.focusSession.findMany(),
     getSettings(),
   ]);
@@ -66,6 +67,10 @@ export async function exportData() {
       ...routine,
       createdAt: routine.createdAt.toISOString(),
       updatedAt: routine.updatedAt.toISOString(),
+    })),
+    routineExceptions: routineExceptions.map((exception) => ({
+      ...exception,
+      createdAt: exception.createdAt.toISOString(),
     })),
     focusSessions: focusSessions.map((session) => ({
       ...session,
@@ -208,6 +213,15 @@ settingsRouter.post(
             ...routine,
             createdAt: new Date(routine.createdAt),
             updatedAt: new Date(routine.updatedAt),
+          })),
+        });
+      }
+      const pauses = backup.routineExceptions ?? [];
+      if (pauses.length) {
+        await tx.routineException.createMany({
+          data: pauses.map((exception) => ({
+            ...exception,
+            createdAt: new Date(exception.createdAt),
           })),
         });
       }

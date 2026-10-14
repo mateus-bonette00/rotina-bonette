@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { routinePatchSchema, routineWriteSchema } from "rotina-bonette-shared";
+import { routineExceptionWriteSchema, routinePatchSchema, routineWriteSchema } from "rotina-bonette-shared";
 import { notFound } from "../lib/errors.js";
 import { asyncHandler, parse } from "../lib/http.js";
 import { prisma } from "../lib/prisma.js";
@@ -15,7 +15,10 @@ routinesRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
     const routines = await prisma.routine.findMany({
-      include: { project: { select: { id: true, name: true, color: true } } },
+      include: {
+        project: { select: { id: true, name: true, color: true } },
+        exceptions: { orderBy: { startDate: "asc" } },
+      },
       orderBy: { name: "asc" },
     });
     res.json({ routines });
@@ -37,6 +40,9 @@ routinesRouter.post(
         type: input.type,
         priority: input.priority ?? "P3",
         notes: input.notes ?? null,
+        intervalWeeks: input.intervalWeeks ?? 1,
+        anchorDate: input.anchorDate ?? null,
+        dayTimes: input.dayTimes ?? {},
       },
     });
     res.status(201).json({ routine });
@@ -61,6 +67,9 @@ routinesRouter.patch(
         ...(input.type !== undefined ? { type: input.type } : {}),
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        ...(input.intervalWeeks !== undefined ? { intervalWeeks: input.intervalWeeks } : {}),
+        ...(input.anchorDate !== undefined ? { anchorDate: input.anchorDate } : {}),
+        ...(input.dayTimes !== undefined ? { dayTimes: input.dayTimes } : {}),
       },
     });
     res.json({ routine });
@@ -73,6 +82,28 @@ routinesRouter.delete(
     const existing = await prisma.routine.findUnique({ where: { id: req.params.id } });
     if (!existing) throw notFound("Rotina não encontrada.");
     await prisma.routine.delete({ where: { id: existing.id } });
+    res.status(204).send();
+  }),
+);
+
+routinesRouter.post(
+  "/:id/exceptions",
+  asyncHandler(async (req, res) => {
+    const input = parse(routineExceptionWriteSchema, req.body);
+    const existing = await prisma.routine.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw notFound("Rotina não encontrada.");
+    const exception = await prisma.routineException.create({ data: { routineId: existing.id, ...input } });
+    res.status(201).json({ exception });
+  }),
+);
+
+routinesRouter.delete(
+  "/:id/exceptions/:exceptionId",
+  asyncHandler(async (req, res) => {
+    const { count } = await prisma.routineException.deleteMany({
+      where: { id: req.params.exceptionId, routineId: req.params.id },
+    });
+    if (!count) throw notFound("Pausa não encontrada.");
     res.status(204).send();
   }),
 );

@@ -181,8 +181,24 @@ model Routine {
   type            String
   priority        Priority @default(P3)
   notes           String?
+  intervalWeeks   Int      @default(1)
+  anchorDate      String?
+  dayTimes        Json     @default("{}")
+  exceptions      RoutineException[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// Pausa de uma série: ocorrências entre startDate e endDate (YYYY-MM-DD, inclusivo) não acontecem.
+model RoutineException {
+  id        String   @id @default(cuid())
+  routineId String
+  routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  startDate String
+  endDate   String
+  createdAt DateTime @default(now())
+
+  @@index([routineId])
 }
 
 model FocusSession {

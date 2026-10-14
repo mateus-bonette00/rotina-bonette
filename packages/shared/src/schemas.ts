@@ -138,9 +138,27 @@ export const routineWriteSchema = z.object({
   type: z.string().trim().min(1).max(40),
   priority: z.enum(PRIORITIES).optional(),
   notes: z.string().max(5000).nullable().optional(),
+  intervalWeeks: z.number().int().min(1).max(8).optional(),
+  anchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  dayTimes: z
+    .record(
+      z.string().regex(/^[0-6]$/),
+      z.object({
+        startTime: z.string().regex(/^\d{2}:\d{2}$/),
+        durationMinutes: z.number().int().min(5).max(12 * 60),
+      }),
+    )
+    .optional(),
 });
 
 export const routinePatchSchema = routineWriteSchema.partial();
+
+export const routineExceptionWriteSchema = z
+  .object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .refine((value) => value.endDate >= value.startDate, { message: "A data final deve ser depois da inicial.", path: ["endDate"] });
 
 export const focusStartSchema = z.object({
   taskId: z.string().min(1),
@@ -255,10 +273,16 @@ export const backupSchema = z.object({
       type: z.string(),
       priority: z.enum(PRIORITIES).default("P3"),
       notes: z.string().nullable(),
+      intervalWeeks: z.number().int().min(1).default(1),
+      anchorDate: z.string().nullable().default(null),
+      dayTimes: z.record(z.object({ startTime: z.string(), durationMinutes: z.number().int() })).default({}),
       createdAt: z.string(),
       updatedAt: z.string(),
     }),
   ),
+  routineExceptions: z
+    .array(z.object({ id: z.string(), routineId: z.string(), startDate: z.string(), endDate: z.string(), createdAt: z.string() }))
+    .default([]),
   focusSessions: z.array(
     z.object({
       id: z.string(),

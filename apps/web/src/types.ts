@@ -94,6 +94,10 @@ export type Routine = {
   type: string;
   priority: Priority;
   notes: string | null;
+  intervalWeeks: number;
+  anchorDate: string | null;
+  dayTimes: Record<string, { startTime: string; durationMinutes: number }>;
+  exceptions: { id: string; startDate: string; endDate: string }[];
   project?: { id: string; name: string; color: string } | null;
 };
 
