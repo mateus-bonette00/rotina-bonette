@@ -320,6 +320,8 @@ export const backupSchema = z.object({
     defaultFocusMinutes: z.number().int(),
     sessionIdleHours: z.number().int(),
     showCompletedDays: z.number().int(),
+    // Quadro vazio ({}) ou de backup antigo não barra a importação.
+    kanbanBoard: settingsPatchSchema.shape.kanbanBoard.catch(undefined),
     createdAt: z.string(),
     updatedAt: z.string(),
   }),

@@ -243,6 +243,7 @@ settingsRouter.post(
           defaultFocusMinutes: backup.settings.defaultFocusMinutes,
           sessionIdleHours: backup.settings.sessionIdleHours,
           showCompletedDays: backup.settings.showCompletedDays,
+          kanbanBoard: backup.settings.kanbanBoard ?? {},
         },
         create: {
           id: "app",
@@ -251,6 +252,7 @@ settingsRouter.post(
           defaultFocusMinutes: backup.settings.defaultFocusMinutes,
           sessionIdleHours: backup.settings.sessionIdleHours,
           showCompletedDays: backup.settings.showCompletedDays,
+          kanbanBoard: backup.settings.kanbanBoard ?? {},
         },
       });
     });

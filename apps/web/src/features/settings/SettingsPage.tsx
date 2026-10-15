@@ -21,6 +21,18 @@ import type { Settings } from "../../types";
 type SettingsForm = z.infer<typeof settingsPatchSchema>;
 type PinForm = z.infer<typeof changePinSchema>;
 
+// Cópia fica no aparelho: no Render o disco do servidor é apagado a cada deploy/reinício.
+async function downloadBackup() {
+  const payload = await api<unknown>("/settings/export", { method: "POST", body: "{}" });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `rotina-bonette-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function SettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -175,19 +187,7 @@ export function SettingsPage() {
         </p>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="ghost"
-            onClick={async () => {
-              const payload = await api<unknown>("/settings/export", { method: "POST", body: "{}" });
-              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = "rotina-bonette-backup.json";
-              link.click();
-              URL.revokeObjectURL(url);
-            }}
-          >
+          <Button variant="ghost" onClick={downloadBackup}>
             <Download className="h-4 w-4" />
             Exportar JSON
           </Button>
@@ -203,8 +203,9 @@ export function SettingsPage() {
                 const file = event.target.files?.[0];
                 if (!file) return;
                 const text = await file.text();
+                await downloadBackup();
                 await api("/settings/import", { method: "POST", body: text });
-                setMessage("Backup importado com sucesso. Cópia anterior salva em data/backups.");
+                setMessage("Backup importado com sucesso. Os dados anteriores foram baixados neste aparelho.");
                 await queryClient.invalidateQueries();
               }}
             />
@@ -247,9 +248,10 @@ export function SettingsPage() {
             variant="danger"
             disabled={wipe !== "APAGAR TUDO"}
             onClick={async () => {
+              await downloadBackup();
               await api("/settings/wipe", { method: "POST", body: JSON.stringify({ confirmation: "APAGAR TUDO" }) });
               setWipe("");
-              setMessage("Dados apagados. O backup anterior foi salvo em data/backups.");
+              setMessage("Dados apagados. O backup anterior foi baixado neste aparelho.");
               await queryClient.invalidateQueries();
             }}
           >
