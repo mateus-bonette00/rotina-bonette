@@ -7,7 +7,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Calendar as CalendarIcon,
   CalendarDays,
   Pause,
   Play,
@@ -347,26 +346,20 @@ export function CalendarPage() {
   ];
 
   return (
-    <div className="grid gap-5">
-      {/* Refined Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-focus/15 text-focus">
-              <CalendarIcon className="h-4 w-4" />
-            </span>
-            <h1 className="page-title">Calendário & Agenda</h1>
-          </div>
-          <p className="mt-1 text-xs text-muted">
-            Arraste no calendário para criar. Clique numa rotina para pular um dia, pausar até uma data ou editar a série; o destaque do card segue a prioridade.
-          </p>
+    <div className="grid gap-3 md:gap-4">
+      <header className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="page-title">Calendário</h1>
+          <Button onClick={() => openCreate()} className="h-9 px-3.5 text-xs sm:hidden">
+            <Plus className="h-4 w-4" />
+            Novo
+          </Button>
         </div>
 
-        <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
-          {/* Project filter */}
+        <div className="flex min-w-0 items-center gap-2">
           <select
             aria-label="Filtrar blocos por projeto"
-            className="h-9.5 min-w-0 flex-1 rounded-xl border border-line bg-panel px-3 text-xs sm:flex-none text-ink outline-none transition focus:border-focus cursor-pointer"
+            className="h-9 min-w-0 flex-1 rounded-xl border border-line bg-panel px-3 text-xs text-ink outline-none transition focus:border-focus cursor-pointer sm:w-48 sm:flex-none"
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
           >
@@ -378,38 +371,34 @@ export function CalendarPage() {
             ))}
           </select>
 
-          {/* New Block Button */}
-          <Button onClick={() => openCreate()} className="h-9.5 px-4 text-xs">
+          <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Filtrar por prioridade">
+            {PRIORITIES.map((item) => {
+              const off = hidden.includes(item);
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  aria-pressed={!off}
+                  title={PRIORITY_LABEL[item]}
+                  onClick={() => setHidden(off ? hidden.filter((value) => value !== item) : [...hidden, item])}
+                  className={cx(
+                    "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border px-2 text-xs font-semibold tabular-nums transition-colors duration-150",
+                    off ? "border-line bg-transparent text-muted line-through" : "border-line bg-panel text-ink hover:border-focus",
+                  )}
+                >
+                  <span className={cx("h-2 w-2 rounded-full", priorityDot[item], off && "opacity-40")} />
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+
+          <Button onClick={() => openCreate()} className="hidden h-9 px-4 text-xs sm:inline-flex">
             <Plus className="h-4 w-4" />
             Novo
           </Button>
         </div>
       </header>
-
-      {/* Legenda = filtro de prioridade */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por prioridade">
-        {PRIORITIES.map((item) => {
-          const off = hidden.includes(item);
-          return (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={!off}
-              onClick={() => setHidden(off ? hidden.filter((value) => value !== item) : [...hidden, item])}
-              className={cx(
-                "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors duration-150",
-                off ? "border-line bg-transparent text-muted line-through" : "border-line bg-panel text-ink hover:border-focus",
-              )}
-            >
-              <span className={cx("h-2.5 w-2.5 rounded-full", priorityDot[item], off && "opacity-40")} />
-              {PRIORITY_LABEL[item]}
-            </button>
-          );
-        })}
-        <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted">
-          <Repeat className="h-3.5 w-3.5" /> = rotina fixa
-        </span>
-      </div>
 
       {error && !editor ? (
         <div className="rounded-xl border border-hot/30 bg-hot/10 px-4 py-2.5 text-xs font-semibold text-hot">
@@ -419,7 +408,7 @@ export function CalendarPage() {
 
       {/* Main Calendar Card */}
       <div
-        className="overflow-hidden rounded-2xl border border-line bg-panel p-3 md:p-5 shadow-sm transition"
+        className="overflow-hidden rounded-2xl border border-line bg-panel p-2 md:p-4 shadow-sm transition"
         data-testid="calendar"
       >
         <FullCalendar
@@ -447,7 +436,7 @@ export function CalendarPage() {
           selectable
           selectMirror
           nowIndicator
-          height="calc(100dvh - 14rem)"
+          height={isMobile() ? "calc(100dvh - 12.5rem)" : "calc(100dvh - 9.5rem)"}
           allDaySlot={false}
           slotMinTime="05:00:00"
           slotMaxTime="24:00:00"

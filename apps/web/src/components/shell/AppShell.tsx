@@ -197,7 +197,7 @@ export function AppShell() {
 
       {/* Main Content Area */}
       <div className={collapsed ? "md:pl-16" : "md:pl-60"}>
-        <main className="px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-12 max-w-[1600px] mx-auto">
+        <main className="px-4 pt-4 pb-20 md:px-8 md:py-8 max-w-[1600px] mx-auto">
           <Outlet context={{ notify: setToast }} />
         </main>
       </div>

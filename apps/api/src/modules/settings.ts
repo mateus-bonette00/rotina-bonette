@@ -278,6 +278,7 @@ settingsRouter.post(
           defaultFocusMinutes: 25,
           sessionIdleHours: 12,
           showCompletedDays: 7,
+          kanbanBoard: {},
         },
         create: { id: "app" },
       }),

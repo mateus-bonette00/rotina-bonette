@@ -177,6 +177,23 @@ export const settingsPatchSchema = z.object({
   defaultFocusMinutes: z.number().int().min(5).max(180).optional(),
   sessionIdleHours: z.number().int().min(1).max(24 * 14).optional(),
   showCompletedDays: z.number().int().min(1).max(90).optional(),
+  // Listas do Kanban + em qual lista cada tarefa está; vive no servidor para aparecer em todo aparelho.
+  kanbanBoard: z
+    .object({
+      columns: z
+        .array(
+          z.object({
+            id: z.string().min(1).max(64),
+            title: z.string().min(1).max(80),
+            status: z.enum(TASK_STATUSES),
+            isCustom: z.boolean().optional(),
+            color: z.string().max(32).optional(),
+          }),
+        )
+        .max(30),
+      taskMap: z.record(z.string(), z.string().max(64)),
+    })
+    .optional(),
 });
 
 export const activateProjectSchema = z.object({

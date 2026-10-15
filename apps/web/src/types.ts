@@ -119,4 +119,8 @@ export type Settings = {
   defaultFocusMinutes: number;
   sessionIdleHours: number;
   showCompletedDays: number;
+  kanbanBoard?: {
+    columns?: { id: string; title: string; status: TaskStatus; isCustom?: boolean; color?: string }[];
+    taskMap?: Record<string, string>;
+  };
 };

@@ -30,8 +30,6 @@ import {
   AlignLeft,
   Calendar,
   CheckSquare,
-  Kanban as KanbanIcon,
-  LayoutGrid,
   MoreHorizontal,
   Plus,
   RotateCcw,
@@ -49,7 +47,7 @@ import {
 import { Button, Dialog, PriorityBadge } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
 import { cx } from "../../lib/format";
-import type { Project, Task } from "../../types";
+import type { Project, Settings, Task } from "../../types";
 import { TaskDialog, type TaskDraft } from "./TaskDialog";
 
 type MoveVars = { id: string; status: TaskStatus; confirmReplace?: boolean; orderedIds?: string[] };
@@ -76,6 +74,7 @@ const DEFAULT_COLUMNS: KanbanColumnConfig[] = [
   { id: "custom_start", title: "Lista", status: "BACKLOG", isCustom: true },
 ];
 
+// Versões antigas guardavam as listas só no navegador; lidas uma vez para migrar ao servidor.
 const STORAGE_LISTS_KEY = "rotina.kanban.board_lists.v3";
 const STORAGE_TASK_LISTS_KEY = "rotina.kanban.task_custom_lists.v3";
 
@@ -114,21 +113,36 @@ export function KanbanPage() {
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListTitle, setNewListTitle] = useState("");
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_LISTS_KEY, JSON.stringify(columns));
-    } catch {
-      // ignore
-    }
-  }, [columns]);
+  // Listas ficam no servidor (AppSettings.kanbanBoard) para o quadro ser o mesmo no notebook e no celular.
+  const settings = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api<{ settings: Settings }>("/settings"),
+  });
+  const hydrated = useRef(false);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_TASK_LISTS_KEY, JSON.stringify(customTaskMap));
-    } catch {
-      // ignore
+    if (hydrated.current || !settings.data) return;
+    hydrated.current = true;
+    const board = settings.data.settings.kanbanBoard;
+    if (board?.columns?.length) {
+      setColumns(board.columns);
+      setCustomTaskMap(board.taskMap ?? {});
+    } else {
+      saveBoard(columns, customTaskMap);
     }
-  }, [customTaskMap]);
+  }, [settings.data]);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const timer = window.setTimeout(() => saveBoard(columns, customTaskMap), 400);
+    return () => window.clearTimeout(timer);
+  }, [columns, customTaskMap]);
+
+  function saveBoard(cols: KanbanColumnConfig[], taskMap: Record<string, string>) {
+    void api("/settings", { method: "PATCH", body: JSON.stringify({ kanbanBoard: { columns: cols, taskMap } }) }).catch(
+      (caught) => setError(caught instanceof ApiError ? caught.message : "Não consegui salvar as listas."),
+    );
+  }
 
   // Mouse arrasta após 6px; toque exige segurar 200ms para não brigar com a rolagem da página.
   const sensors = useSensors(
@@ -202,10 +216,8 @@ export function KanbanPage() {
         map.get(customColId)!.push(task);
         continue;
       }
-      const statusCol = columns.find((c) => c.status === task.status && !c.isCustom);
-      if (statusCol && map.has(statusCol.id)) {
-        map.get(statusCol.id)!.push(task);
-      }
+      const statusCol = columns.find((c) => c.status === task.status && !c.isCustom) ?? columns[0];
+      if (statusCol) map.get(statusCol.id)!.push(task);
     }
     return map;
   }, [columns, filteredTasks, customTaskMap]);
@@ -385,7 +397,7 @@ export function KanbanPage() {
     endDrag();
     setPreview({ ...map, [colId]: ids });
 
-    // Listas vivem só no navegador; o status real continua no backend.
+    // Lista vai para o quadro salvo; o status real continua na tarefa.
     setCustomTaskMap((prev) => {
       const next = { ...prev };
       if (targetCol.isCustom) next[task.id] = targetCol.id;
@@ -403,52 +415,29 @@ export function KanbanPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100dvh-6rem)] h-auto rounded-2xl bg-[#0f1216] text-[#e6edf3] p-4 md:p-6 overflow-visible border border-line/40 shadow-2xl flex flex-col">
-      {/* Ambient background light (inspired by Trello dark theme in user's print) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-44 left-1/3 h-[500px] w-[500px] rounded-full bg-orange-600/10 blur-[130px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-1/2 right-10 h-[350px] w-[350px] rounded-full bg-blue-600/5 blur-[120px]"
-      />
-
-      {/* Top Board Navigation Bar (matching print) */}
-      <header className="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-focus/20 text-focus border border-focus/30">
-              <KanbanIcon className="h-4 w-4" />
-            </span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                Quadro
-                <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-muted font-normal">
-                  Rotina Bonette
-                </span>
-              </h1>
-              <p className="text-xs text-muted/80">Fazendo {doingCount}/1 · Hoje {todayCount}/3</p>
-            </div>
-          </div>
-
+    <div className="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line/40 bg-[#0f1216] p-3 text-[#e6edf3] shadow-2xl md:min-h-[calc(100dvh-4rem)] md:p-5">
+      <header className="relative z-10 mb-3 grid gap-2 border-b border-white/[0.08] pb-3 md:mb-4 md:flex md:items-center md:justify-between md:gap-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-lg font-bold tracking-tight text-white md:text-xl">Quadro</h1>
+          <p className="text-xs tabular-nums text-muted/80">
+            Fazendo {doingCount}/1 · Hoje {todayCount}/3
+          </p>
         </div>
 
-        {/* Action Controls and Filters */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Quick search input */}
-          <div className="relative">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] gap-2 md:flex md:items-center">
+          <div className="relative col-span-4">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Pesquisar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 w-40 sm:w-56 rounded-xl border border-white/[0.1] bg-[#161b22] pl-8 pr-3 text-xs text-white placeholder:text-muted focus:border-focus focus:outline-none focus:ring-1 focus:ring-focus transition"
+              className="h-9 w-full rounded-xl border border-white/[0.1] bg-[#161b22] pl-8 pr-8 text-xs text-white placeholder:text-muted focus:border-focus focus:outline-none focus:ring-1 focus:ring-focus transition md:w-52"
             />
             {searchQuery ? (
               <button
                 type="button"
+                aria-label="Limpar pesquisa"
                 onClick={() => setSearchQuery("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-white"
               >
@@ -457,10 +446,9 @@ export function KanbanPage() {
             ) : null}
           </div>
 
-          {/* Project Filter */}
           <select
             aria-label="Filtrar por projeto"
-            className="h-9 rounded-xl border border-white/[0.1] bg-[#161b22] px-3 text-xs text-white outline-none focus:border-focus cursor-pointer transition hover:bg-[#1f242c]"
+            className="h-9 w-full min-w-0 rounded-xl border border-white/[0.1] bg-[#161b22] px-2.5 text-xs text-white outline-none focus:border-focus cursor-pointer transition hover:bg-[#1f242c] md:w-40"
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
           >
@@ -472,10 +460,9 @@ export function KanbanPage() {
             ))}
           </select>
 
-          {/* Priority Filter */}
           <select
             aria-label="Filtrar por prioridade"
-            className="h-9 rounded-xl border border-white/[0.1] bg-[#161b22] px-3 text-xs text-white outline-none focus:border-focus cursor-pointer transition hover:bg-[#1f242c]"
+            className="h-9 w-full min-w-0 rounded-xl border border-white/[0.1] bg-[#161b22] px-2.5 text-xs text-white outline-none focus:border-focus cursor-pointer transition hover:bg-[#1f242c] md:w-36"
             value={priority}
             onChange={(event) => setPriority(event.target.value)}
           >
@@ -487,20 +474,19 @@ export function KanbanPage() {
             ))}
           </select>
 
-          {/* Reset Columns button */}
           <button
             type="button"
             onClick={handleResetLists}
             title="Restaurar colunas padrão"
+            aria-label="Restaurar colunas padrão"
             className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.1] bg-[#161b22] text-muted hover:bg-[#1f242c] hover:text-white transition cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
 
-          {/* Create Task Button */}
           <Button
             onClick={() => setDraft({ mode: "create", status: "INBOX" })}
-            className="h-9 px-3.5 bg-focus hover:bg-focus/90 text-white rounded-xl text-xs font-semibold"
+            className="h-9 px-3 bg-focus hover:bg-focus/90 text-white rounded-xl text-xs font-semibold"
           >
             <Plus className="h-3.5 w-3.5" />
             Criar
@@ -528,7 +514,7 @@ export function KanbanPage() {
         onDragEnd={onDragEnd}
         onDragCancel={cancelDrag}
       >
-        <div className="relative z-10 w-full flex items-start gap-3.5 overflow-x-auto overflow-y-visible pb-4 pt-1 select-none">
+        <div className="relative z-10 -mx-3 flex min-w-0 snap-x snap-proximity items-start gap-3 overflow-x-auto overscroll-x-contain px-3 pb-3 pt-1 select-none md:mx-0 md:px-0 md:snap-none">
           {columns.map((column) => {
             const colTasks = columnTaskMap.get(column.id) ?? [];
             return (
@@ -564,7 +550,7 @@ export function KanbanPage() {
           })}
 
           {/* "+ Adicionar outra lista" Column Button (matches Trello exactly!) */}
-          <div className="w-72 shrink-0">
+          <div className="w-[min(18rem,calc(100vw-4.5rem))] shrink-0 snap-start">
             {isAddingList ? (
               <div className="rounded-xl border border-white/[0.1] bg-[#161b22] p-3 shadow-xl transition">
                 <input
@@ -621,34 +607,6 @@ export function KanbanPage() {
           document.body,
         )}
       </DndContext>
-
-      {/* Bottom Switcher Dock (like in the print: Caixa de entrada | Planejador | Quadro | Mudar de quadros) */}
-      <footer className="relative z-10 mt-auto pt-4 flex justify-center">
-        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-[#161b22]/90 backdrop-blur-md px-2 py-1.5 text-xs shadow-xl">
-          <a
-            href="/ideias"
-            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-muted hover:bg-white/10 hover:text-white transition"
-          >
-            <span>Caixa de entrada</span>
-          </a>
-          <a
-            href="/"
-            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-muted hover:bg-white/10 hover:text-white transition"
-          >
-            <span>Planejador</span>
-          </a>
-          <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 font-semibold text-white shadow-sm">
-            <LayoutGrid className="h-3.5 w-3.5 text-focus" />
-            <span>Quadro</span>
-          </span>
-          <a
-            href="/projetos"
-            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-muted hover:bg-white/10 hover:text-white transition"
-          >
-            <span>Projetos</span>
-          </a>
-        </div>
-      </footer>
 
       {/* Confirmation modal for Doing replacement */}
       <Dialog
@@ -730,7 +688,7 @@ function Column({
       ref={drop.setNodeRef}
       data-testid={`column-${column.status}`}
       className={cx(
-        "flex h-fit w-72 shrink-0 flex-col rounded-2xl border border-white/[0.08] bg-[#101418]/90 backdrop-blur-sm p-3 shadow-lg transition-colors duration-150",
+        "flex h-fit w-[min(18rem,calc(100vw-4.5rem))] shrink-0 snap-start flex-col rounded-2xl border border-white/[0.08] bg-[#101418]/90 backdrop-blur-sm p-3 shadow-lg transition-colors duration-150",
         highlight && "border-focus/60 bg-[#141a22]",
       )}
     >

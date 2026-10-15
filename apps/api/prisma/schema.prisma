@@ -221,6 +221,7 @@ model AppSettings {
   defaultFocusMinutes Int          @default(25)
   sessionIdleHours    Int          @default(12)
   showCompletedDays   Int          @default(7)
+  kanbanBoard         Json         @default("{}")
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 }
