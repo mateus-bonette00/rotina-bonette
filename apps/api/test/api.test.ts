@@ -39,6 +39,39 @@ beforeAll(async () => {
   await prisma.user.deleteMany();
   await prisma.user.create({ data: { name: "Bonette", pinHash } });
 });
+  it("edita e exclui datas isoladas de uma rotina", async () => {
+    const { agent, csrf } = await login();
+    const created = await agent.post("/api/v1/routines").set("x-csrf-token", csrf).send({
+      name: "Clean in Line", type: "routine", daysOfWeek: [2, 4],
+      startTime: "09:00", durationMinutes: 60,
+    });
+    expect(created.status).toBe(201);
+    const id = created.body.routine.id as string;
+    const changed = await agent.put(`/api/v1/routines/${id}/occurrences/2026-10-20`).set("x-csrf-token", csrf).send({
+      title: "Outro foco", type: "TASK", priority: "P2",
+      startAt: "2026-10-21T14:00:00.000Z", endAt: "2026-10-21T15:00:00.000Z",
+    });
+    expect(changed.status).toBe(200);
+    expect(changed.body.override.date).toBe("2026-10-20");
+    expect(changed.body.override.startAt).toBe("2026-10-21T14:00:00.000Z");
+    const invalid = await agent.put(`/api/v1/routines/${id}/occurrences/2026-10-21`).set("x-csrf-token", csrf).send({
+      title: "Inválida", type: "TASK", startAt: "2026-10-21T14:00:00.000Z", endAt: "2026-10-21T15:00:00.000Z",
+    });
+    expect(invalid.status).toBe(404);
+    const removed = await agent.delete(`/api/v1/routines/${id}/occurrences/2026-10-22`).set("x-csrf-token", csrf);
+    expect(removed.status).toBe(204);
+    const listed = await agent.get("/api/v1/routines");
+    const routine = listed.body.routines.find((item: { id: string }) => item.id === id);
+    expect(routine.name).toBe("Clean in Line");
+    expect(routine.daysOfWeek).toEqual([2, 4]);
+    expect(routine.overrides).toEqual(expect.arrayContaining([
+      expect.objectContaining({ date: "2026-10-20", title: "Outro foco", cancelled: false }),
+      expect.objectContaining({ date: "2026-10-22", cancelled: true }),
+    ]));
+    const restored = await agent.delete(`/api/v1/routines/${id}/occurrences/2026-10-22/override`).set("x-csrf-token", csrf);
+    expect(restored.status).toBe(204);
+    expect(await prisma.routineOccurrenceOverride.count({ where: { routineId: id } })).toBe(1);
+  });
 
 beforeEach(async () => {
   resetPinAttempts();

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { routineExceptionWriteSchema, routinePatchSchema, routineWriteSchema } from "rotina-bonette-shared";
-import { notFound } from "../lib/errors.js";
+import { calendarWriteSchema, expandRoutine, routineExceptionWriteSchema, routinePatchSchema, routineWriteSchema } from "rotina-bonette-shared";
+import type { RoutineSlot } from "rotina-bonette-shared";
+import { AppError, notFound } from "../lib/errors.js";
 import { asyncHandler, parse } from "../lib/http.js";
 import { prisma } from "../lib/prisma.js";
 
@@ -18,6 +19,7 @@ routinesRouter.get(
       include: {
         project: { select: { id: true, name: true, color: true } },
         exceptions: { orderBy: { startDate: "asc" } },
+        overrides: { include: { project: { select: { id: true, name: true, color: true } } } },
       },
       orderBy: { name: "asc" },
     });
@@ -104,6 +106,67 @@ routinesRouter.delete(
       where: { id: req.params.exceptionId, routineId: req.params.id },
     });
     if (!count) throw notFound("Pausa não encontrada.");
+    res.status(204).send();
+  }),
+);
+
+async function findOccurrence(routineId: string, date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new AppError(400, "INVALID_DATE", "Data inválida.");
+  const routine = await prisma.routine.findUnique({ where: { id: routineId } });
+  if (!routine) throw notFound("Rotina não encontrada.");
+  const matches = expandRoutine(
+    { ...routine, dayTimes: routine.dayTimes as Record<string, RoutineSlot> },
+    [], date, date,
+  );
+  if (matches.length !== 1 || matches[0].date !== date) throw notFound("Ocorrência não encontrada nesta data.");
+  return routine;
+}
+
+routinesRouter.put(
+  "/:id/occurrences/:date",
+  asyncHandler(async (req, res) => {
+    const input = parse(calendarWriteSchema, req.body);
+    const routine = await findOccurrence(req.params.id, req.params.date);
+    const data = {
+      cancelled: false,
+      title: input.title,
+      type: input.type,
+      priority: input.priority ?? routine.priority,
+      startAt: new Date(input.startAt),
+      endAt: new Date(input.endAt),
+      projectId: input.projectId === undefined ? routine.projectId : input.projectId,
+      taskId: input.taskId ?? null,
+      notes: input.notes === undefined ? routine.notes : input.notes,
+    } as const;
+    const override = await prisma.routineOccurrenceOverride.upsert({
+      where: { routineId_date: { routineId: req.params.id, date: req.params.date } },
+      create: { routineId: req.params.id, date: req.params.date, ...data },
+      update: data,
+    });
+    res.json({ override });
+  }),
+);
+
+routinesRouter.delete(
+  "/:id/occurrences/:date",
+  asyncHandler(async (req, res) => {
+    await findOccurrence(req.params.id, req.params.date);
+    await prisma.routineOccurrenceOverride.upsert({
+      where: { routineId_date: { routineId: req.params.id, date: req.params.date } },
+      create: { routineId: req.params.id, date: req.params.date, cancelled: true },
+      update: { cancelled: true },
+    });
+    res.status(204).send();
+  }),
+);
+
+routinesRouter.delete(
+  "/:id/occurrences/:date/override",
+  asyncHandler(async (req, res) => {
+    const { count } = await prisma.routineOccurrenceOverride.deleteMany({
+      where: { routineId: req.params.id, date: req.params.date },
+    });
+    if (!count) throw notFound("Alteração não encontrada.");
     res.status(204).send();
   }),
 );

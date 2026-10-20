@@ -98,6 +98,19 @@ export type Routine = {
   anchorDate: string | null;
   dayTimes: Record<string, { startTime: string; durationMinutes: number }>;
   exceptions: { id: string; startDate: string; endDate: string }[];
+  overrides: {
+    date: string;
+    cancelled: boolean;
+    title: string | null;
+    type: CalendarType | null;
+    priority: Priority | null;
+    startAt: string | null;
+    endAt: string | null;
+    projectId: string | null;
+    taskId: string | null;
+    notes: string | null;
+    project?: { id: string; name: string; color: string } | null;
+  }[];
   project?: { id: string; name: string; color: string } | null;
 };
 

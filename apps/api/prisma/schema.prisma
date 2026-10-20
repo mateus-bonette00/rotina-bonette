@@ -101,6 +101,7 @@ model Project {
   tasks       Task[]
   blocks      CalendarBlock[]
   routines    Routine[]
+  routineOverrides RoutineOccurrenceOverride[]
   ideas       Idea[]
 
   @@index([status])
@@ -130,6 +131,7 @@ model Task {
   updatedAt          DateTime    @updatedAt
   focusSessions      FocusSession[]
   blocks             CalendarBlock[]
+  routineOverrides   RoutineOccurrenceOverride[]
   ideas              Idea[]
 
   @@index([status])
@@ -185,6 +187,7 @@ model Routine {
   anchorDate      String?
   dayTimes        Json     @default("{}")
   exceptions      RoutineException[]
+  overrides       RoutineOccurrenceOverride[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -199,6 +202,30 @@ model RoutineException {
   createdAt DateTime @default(now())
 
   @@index([routineId])
+}
+
+// Alteração ou cancelamento de uma data, sem modificar a série.
+model RoutineOccurrenceOverride {
+  id        String       @id @default(cuid())
+  routineId String
+  routine   Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  date      String
+  cancelled Boolean      @default(false)
+  title     String?
+  type      CalendarType?
+  priority  Priority?
+  startAt   DateTime?
+  endAt     DateTime?
+  projectId String?
+  project   Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId    String?
+  task      Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([routineId, date])
+  @@index([startAt, endAt])
 }
 
 model FocusSession {

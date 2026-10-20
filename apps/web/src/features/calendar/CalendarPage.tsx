@@ -46,9 +46,10 @@ type Editor = {
   start: string;
   end: string;
   title?: string;
+  occurrence?: Occurrence;
 };
 
-// Ocorrência de uma rotina clicada no calendário: pular dia, pausar período ou retomar.
+// Ocorrência de uma rotina clicada no calendário.
 type Occurrence = { routine: Routine; date: string };
 
 const priorityDot: Record<Priority, string> = {
@@ -157,17 +158,19 @@ export function CalendarPage() {
   useEffect(() => {
     if (!editor) return;
     const { block, routine, start, end } = editor;
+    const occurrenceRoutine = editor.occurrence?.routine;
+    const override = occurrenceRoutine?.overrides?.find((item) => item.date === editor.occurrence?.date);
     const startDate = new Date(start);
     const minutes = Math.max(5, Math.round((new Date(end).getTime() - startDate.getTime()) / 60000));
     form.reset({
-      title: block?.title ?? editor.title ?? "",
-      type: block?.type ?? "DEEP_FOCUS",
-      priority: block?.priority ?? "P3",
-      startAt: toLocalInput(block?.startAt ?? start),
-      endAt: toLocalInput(block?.endAt ?? end),
-      projectId: block?.projectId ?? null,
-      taskId: block?.taskId ?? null,
-      notes: block?.notes ?? "",
+      title: block?.title ?? override?.title ?? occurrenceRoutine?.name ?? editor.title ?? "",
+      type: block?.type ?? override?.type ?? (occurrenceRoutine ? "ROUTINE" : "DEEP_FOCUS"),
+      priority: block?.priority ?? override?.priority ?? occurrenceRoutine?.priority ?? "P3",
+      startAt: toLocalInput(block?.startAt ?? override?.startAt ?? start),
+      endAt: toLocalInput(block?.endAt ?? override?.endAt ?? end),
+      projectId: block?.projectId ?? (override ? override.projectId : occurrenceRoutine?.projectId ?? null),
+      taskId: block?.taskId ?? override?.taskId ?? null,
+      notes: block?.notes ?? (override ? override.notes ?? "" : occurrenceRoutine?.notes ?? ""),
     });
     routineForm.reset({
       name: routine?.name ?? editor.title ?? "",
@@ -223,7 +226,9 @@ export function CalendarPage() {
       notes: values.notes || null,
     };
     try {
-      if (editor?.block) {
+      if (editor?.occurrence) {
+        await api(`/routines/${editor.occurrence.routine.id}/occurrences/${editor.occurrence.date}`, { method: "PUT", body: JSON.stringify(body) });
+      } else if (editor?.block) {
         await api(`/calendar/${editor.block.id}`, { method: "PATCH", body: JSON.stringify(body) });
       } else {
         await api("/calendar", { method: "POST", body: JSON.stringify(body) });
@@ -311,6 +316,39 @@ export function CalendarPage() {
     }
   }
 
+  async function cancelOccurrence(routine: Routine, date: string) {
+    setError(null);
+    try {
+      await api(`/routines/${routine.id}/occurrences/${date}`, { method: "DELETE" });
+      setOccurrence(null);
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Não consegui excluir esta ocorrência.");
+    }
+  }
+
+  async function restoreOccurrence(routine: Routine, date: string) {
+    setError(null);
+    try {
+      await api(`/routines/${routine.id}/occurrences/${date}/override`, { method: "DELETE" });
+      setOccurrence(null);
+      await refresh();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Não consegui restaurar esta ocorrência.");
+    }
+  }
+
+  function editOccurrence(occurrence: Occurrence) {
+    const { routine, date } = occurrence;
+    const override = routine.overrides?.find((item) => item.date === date);
+    const day = new Date(`${date}T12:00:00`).getDay();
+    const slot = routine.dayTimes?.[String(day)] ?? { startTime: routine.startTime ?? "09:00", durationMinutes: routine.durationMinutes };
+    const start = new Date(`${date}T${slot.startTime}:00`);
+    const end = new Date(start.getTime() + slot.durationMinutes * 60000);
+    setOccurrence(null);
+    setEditor({ kind: "block", block: null, routine: null, occurrence, start: override?.startAt ?? start.toISOString(), end: override?.endAt ?? end.toISOString() });
+  }
+
   const visible = (item: { priority: Priority; projectId: string | null }) =>
     !hidden.includes(item.priority) && (!selectedProject || item.projectId === selectedProject);
 
@@ -327,9 +365,11 @@ export function CalendarPage() {
     })),
     ...(visibleDates
       ? (routines.data?.routines ?? [])
-          .filter((routine) => routine.enabled && visible(routine))
-          .flatMap((routine) =>
-            expandRoutine({ ...routine, dayTimes: routine.dayTimes ?? {}, intervalWeeks: routine.intervalWeeks ?? 1, anchorDate: routine.anchorDate ?? null }, routine.exceptions ?? [], visibleDates.from, visibleDates.to).map((item) => {
+          .filter((routine) => routine.enabled)
+          .flatMap((routine) => {
+            const base = (visible(routine) ? expandRoutine({ ...routine, dayTimes: routine.dayTimes ?? {}, intervalWeeks: routine.intervalWeeks ?? 1, anchorDate: routine.anchorDate ?? null }, routine.exceptions ?? [], visibleDates.from, visibleDates.to) : []).flatMap((item) => {
+              const override = routine.overrides?.find((entry) => entry.date === item.date);
+              if (override && !override.cancelled && !item.paused) return [];
               const start = new Date(`${item.date}T${item.startTime}:00`);
               return {
                 id: `routine-${routine.id}-${item.date}`,
@@ -337,11 +377,26 @@ export function CalendarPage() {
                 start,
                 end: new Date(start.getTime() + item.durationMinutes * 60000),
                 editable: false,
-                classNames: [`prio-${routine.priority}`, "is-routine", ...(item.paused ? ["is-paused"] : [])],
-                extendedProps: { kind: "routine", priority: routine.priority, color: routine.project?.color, routineId: routine.id, date: item.date, paused: item.paused },
+                classNames: [`prio-${routine.priority}`, "is-routine", ...(item.paused || override?.cancelled ? ["is-paused"] : [])],
+                extendedProps: { kind: "routine", priority: routine.priority, color: routine.project?.color, routineId: routine.id, date: item.date, paused: item.paused || override?.cancelled },
               };
-            }),
-          )
+            });
+            const edits = (routine.overrides ?? [])
+              .filter((item) => !item.cancelled && item.startAt && item.endAt && !routine.exceptions?.some((pause) => pause.startDate <= item.date && item.date <= pause.endDate))
+              .filter((item) => !selectedProject || item.projectId === selectedProject)
+              .filter((item) => !hidden.includes(item.priority ?? routine.priority))
+              .filter((item) => item.startAt! < range!.to && item.endAt! > range!.from)
+              .map((item) => ({
+                id: `routine-${routine.id}-${item.date}`,
+                title: item.title ?? routine.name,
+                start: item.startAt!,
+                end: item.endAt!,
+                editable: false,
+                classNames: [`prio-${item.priority ?? routine.priority}`, "is-routine"],
+                extendedProps: { kind: "routine", priority: item.priority ?? routine.priority, color: item.project?.color, routineId: routine.id, date: item.date, edited: true },
+              }));
+            return [...base, ...edits];
+          })
       : []),
   ];
 
@@ -491,11 +546,11 @@ export function CalendarPage() {
       {/* Modal Dialog: bloco avulso ou rotina fixa */}
       <Dialog
         open={Boolean(editor)}
-        title={editor?.routine ? "Editar rotina fixa" : editor?.block ? "Editar bloco" : "Novo item na agenda"}
-        subtitle={editor?.kind === "routine" ? "Repete nos dias e horários escolhidos" : "Acontece só nesta data"}
+        title={editor?.routine ? "Editar rotina fixa" : editor?.occurrence ? "Editar esta ocorrência" : editor?.block ? "Editar bloco" : "Novo item na agenda"}
+        subtitle={editor?.kind === "routine" ? "Repete nos dias e horários escolhidos" : editor?.occurrence ? `Só a ocorrência de ${shortDate(editor.occurrence.date)} será alterada` : "Acontece só nesta data"}
         onClose={() => setEditor(null)}
       >
-        {editor && !editor.block && !editor.routine ? (
+        {editor && !editor.block && !editor.routine && !editor.occurrence ? (
           <div role="tablist" aria-label="Tipo de item" className="mb-3.5 grid grid-cols-2 gap-1.5 rounded-xl bg-panel-2 p-1">
             {([
               ["block", "Só uma vez", CalendarDays],
@@ -702,7 +757,7 @@ export function CalendarPage() {
             {error ? <p className="text-xs font-semibold text-hot">{error}</p> : null}
 
             <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line/60 pt-3">
-              <Button type="submit">Salvar bloco</Button>
+              <Button type="submit">{editor?.occurrence ? "Salvar esta ocorrência" : "Salvar bloco"}</Button>
               <Button type="button" variant="quiet" onClick={() => setEditor(null)}>
                 Cancelar
               </Button>
@@ -717,7 +772,7 @@ export function CalendarPage() {
         )}
       </Dialog>
 
-      {/* Ocorrência de rotina: a série original nunca é alterada, só ganha pausas. */}
+      {/* Ações por data sem alterar a série. */}
       <Dialog
         open={Boolean(occurrence)}
         title={occurrence?.routine.name ?? ""}
@@ -729,9 +784,18 @@ export function CalendarPage() {
               const { routine, date } = occurrence;
               const pauseHere = routine.exceptions?.find((item) => item.startDate <= date && date <= item.endDate);
               const single = pauseHere && pauseHere.startDate === pauseHere.endDate;
+              const override = routine.overrides?.find((item) => item.date === date);
               return (
                 <div className="grid gap-3.5" data-testid="occurrence-menu">
-                  {pauseHere ? (
+                  {override?.cancelled && !pauseHere ? (
+                    <>
+                      <p className="text-xs text-muted">Excluída só nesta data. As próximas ocorrências continuam.</p>
+                      <Button type="button" onClick={() => void restoreOccurrence(routine, date)}>
+                        <Play className="h-3.5 w-3.5" />
+                        Reativar este dia
+                      </Button>
+                    </>
+                  ) : pauseHere ? (
                     <>
                       <p className="text-xs text-muted">
                         {single ? `Pulada em ${shortDate(pauseHere.startDate)}.` : `Pausada de ${shortDate(pauseHere.startDate)} até ${shortDate(pauseHere.endDate)}.`}{" "}
@@ -744,9 +808,13 @@ export function CalendarPage() {
                     </>
                   ) : (
                     <>
-                      <Button type="button" onClick={() => void pause(routine, date, date)}>
-                        <Pause className="h-3.5 w-3.5" />
-                        Pular só este dia
+                      <Button type="button" onClick={() => editOccurrence(occurrence)}>
+                        Editar só este dia
+                      </Button>
+                      {override ? <Button type="button" variant="quiet" onClick={() => void restoreOccurrence(routine, date)}>Restaurar original</Button> : null}
+                      <Button type="button" variant="danger" onClick={() => void cancelOccurrence(routine, date)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Excluir só este dia
                       </Button>
                       <div className="grid gap-2 rounded-xl border border-line p-3">
                         <Field label="Pausar até voltar em">
